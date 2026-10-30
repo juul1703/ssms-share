@@ -1,0 +1,1195 @@
+# SSMS-leeromgeving — overdracht
+
+Alles wat een nieuwe chat moet weten om hieraan verder te bouwen.
+Stand: 23 oktober 2026, service worker **v184**.
+
+> **Nieuwe chat begint hier.** De repo in deze zip is compleet en draait zoals
+> hij is. Lees eerst hoofdstuk 1 tot en met 5, dan de werkafspraken in 8, dan
+> de to-do lijst in 10a. Lever wijzigingen altijd als zip met alleen de
+> gewijzigde bestanden, verhoog `VERSIE` in `sw.js`, en zet nieuwe bestanden
+> in `BESTANDEN` in `sw.js` én als scripttag in `index.html`, `vak.html` en
+> `les.html`, vóór `vakken.js`.
+
+
+## 1. Wat het is
+
+Een statische website op GitHub Pages: de digitale leeromgeving voor het
+eerste semester SSMS aan de Haagse Hogeschool. Geen server, geen build, geen
+framework. Losse HTML-, CSS- en JS-bestanden in de hoofdmap.
+
+- Repo-eigenaar: `juul1703`, repo `ssms`
+- Live: https://juul1703.github.io/ssms/
+- Oudere repo `leeromgeving-ssms-` wordt niet meer gebruikt.
+
+Julie werkt vanaf iPhone en iPad en uploadt via de webinterface van GitHub.
+Ze raakt de code niet aan; wijzigingen komen altijd als zip met kant-en-klare
+bestanden.
+
+## 2. De bestanden
+
+| Bestand | Wat het doet |
+|---|---|
+| `index.html` | Homescreen: vakken, deadlines, rooster van vandaag |
+| `vak.html` | Vakpagina |
+| `les.html` | Lespagina |
+| `styles.css` | Alle opmaak |
+| `app.js` | Homescreen, deadlines, voortgang, afvinken, sessieberekening |
+| `rooster.js` | Leest de MyTimetable iCal-link. Maakt geen vakken aan. |
+| `vakken.js` | De enige plek waar staat welke vakken er zijn en welke onderdelen ze hebben |
+| `vak.js` | Tekent de vakpagina |
+| `les.js` | Tekent de lespagina: tabbladen, kopjesbalk, flashcardtab |
+| `lesblokken.js` | Rendert de bloktypes binnen een les |
+| `lesstof.js` | Opzoeken van lesstof |
+| `lesextra.js` | Extra's op de lespagina |
+| `ssms-inhoud.js` | Lesstof, `VAK_VOORBEREIDING`, `VAK_MANUAL`, de studiegids (~840 KB) |
+| `governance-college-1.js` | Governance sessie 1, McCormick H1 plus Lecture 1 (de slides-les is er in v101 in opgenomen) |
+| `governance-college-2.js` | Governance sessie 2, Buckwalter & Balfour uit Quality of Governance plus Lecture 2 (v101) |
+| `governance-college-3.js` | Governance sessie 3, McCormick H8 (kern) en H10 (kern2) plus Lecture 3; nieuw in v101 |
+| `governance-college-4.js` | Governance sessie 4, McCormick H13 (kern) en H15 (kern2), plus lecture 4 (v110) |
+| `governance-college-5.js` | Governance sessie 5, Levi-Faur (2012), uit de literatuur; nieuw in v114, collegestof volgt |
+| `governance-college-6.js` | Governance sessie 6: Huberts e.a. 2022 (programma, kern) en Maia 2020 over de Veiligheidsraad (op Brightspace aangekondigd, kern2); nieuw in v119 |
+| `governance-college-7.js` | Governance sessie 7, McCormick H16 (interest groups) en H17 (public policy), uit de literatuur volgens de standaard; nieuw in v135 |
+| `society-college-2.js` | Society & Politics sessie 2, Macionis H7 (micro-sociologie) plus Lecture 2 (v100) |
+| `society-college-3.js` | Society & Politics sessie 3, Macionis H11 (racism, ethnicities and migration) plus Lecture 3 (v100) |
+| `society-college-4.js` | Society & Politics sessie 4, Macionis H5 (kern) en H16 sociale bewegingen (kern2), plus lecture 4 (v108) |
+| `society-college-5.js` | Society & Politics sessie 5, Macionis H17, plus lecture 5 (v117) |
+| `society-college-6.js` | Society & Politics sessie 6, Macionis H6 (groepen, organisaties, netwerksamenleving), uit de literatuur; nieuw in v120 |
+| `society-college-7.js` | Society sessie 7, Macionis H8 (social divisions and stratification), uit de literatuur volgens de standaard; nieuw in v136 |
+| `society-college-8.js` | Society sessie 8, Macionis H23 (science, cyberspace and the risk society) en H24 (populations, cities and the space of things to come), beide heel, uit de literatuur volgens de standaard; nieuw in v137 |
+| `recap-society.js` | "To remember"-tabbladen voor Society college-2 en college-3 (die van college-1 zit in `society-college-1.js` zelf) |
+| `recap-professional-skills.js` | "To remember" voor PS college-1 en college-2 |
+| `recap-governance.js` | "To remember" voor Governance college-1 (boek plus college), college-2 en college-3 |
+| `intro-college-1.js` | Intro sessie 1: SSMS & what it's all about, Engelse versie; verving in v98 de Nederlandse slides-les |
+| `intro-college-3.js` | Intro sessie 3: Communication Matters (uit de collegeslides; er was nog geen les) |
+| `intro-college-5.js` | Intro sessie 5, Managing Safety & Security (Corr), uit slides en sprekersnotities; nieuw in v115 |
+| `intro-h9.js` | Bieder H9 (Schulman), Engelse versie; tabblad-id `kern2`, zodat sessie 6 twee kernstof-tabs heeft |
+| `intro-h7.js` | Bieder H7 (Brooks & Coole), Engelse versie; stond tot v84 in het Nederlands in `ssms-inhoud.js` |
+| `society-college-1.js` | Society & Politics sessie 1, Macionis H1, H2 en H4 plus Lecture 1 (compleet) |
+| `overview-intro.js` | Quick recaps (tab `overview`) voor Intro-lessen die er nog geen in hun eigen bestand hebben, via `voegOverviewToe()` (lesstof.js); laadt na `recap-intro.js`. v141: college-1, h1, h2, college-3; v142: h3, h5, college-5, h10 (alle Intro-sessies 1-8 met les hebben nu een Quick recap) |
+| `recap-intro.js` | "To remember" voor Intro slides-1 en de hoofdstukken H1, H2, H3, H5 (komen samen in college-2 en college-4) |
+| `ps-college-1.js` | Professional Skills sessie 1, non-verbale communicatie plus de kick-off slides (v102) |
+| `ps-college-2.js` | Professional Skills sessie 2, slecht nieuws: CAT (Dragojevic e.a. 2016), kanalen, McLuhan, barrières |
+| `ps-college-3.js` | Professional Skills sessie 3, communicatiestijl en presenteren: Mehrabian en Amsel, Manning & Reece, de mid-term (nieuw in v102) |
+| `ps-college-4.js` | Professional Skills sessie 4, teamwork en conflictmanagement; slides plus de leeslinks uitgewerkt; nieuw in v110 |
+| `ps-college-5.js` | Professional Skills sessie 5, AI and its responsible use (Wisse); nieuw in v117 |
+| `ps-college-6.js` | PS sessie 6, Hofstede (Żemojtel-Piotrowska & Piotrowski, 2023), uit de literatuur; nieuw in v119 |
+| `ps-midterm-1.js` | PS naslag (Opdrachten): how to mid-term #1, communication analysis; alleen de stof uit manual Table 1; nieuw in v121 |
+| `ps-midterm-2.js` | PS naslag (Opdrachten): how to mid-term #2, job application; nieuw in v121. Personal branding (sessie 6) volgt met de slides |
+| `drm-conceptlist-1/2/3.js` | DRM conceptlijst, drie delen, onder Extra naslagwerken |
+| `drm-college-2.js` | DRM sessie 2, workshop 1 (Carinhas en Lindhout); nieuw in v111 |
+| `drm-college-4.js` | DRM sessie 4 in het programma, lecture 2: Understanding the problem, 6W; nieuw in v111 |
+| `drm-college-5.js` | DRM sessie 5, workshop 2: 6W op de phishing-case (Shop & Go), modelantwoorden, bewijskaart en een vast stappenplan voor elke 6W-vraag; nieuw in v116 |
+| `drm-h3.js` | DRM Verhoeven H3 (aanleiding, 6W, vooronderzoek), les-id `ch3`, hangt aan sessie 3; Engels met To remember en Quick recap; nieuw in v139 (stond Nederlands in `ssms-inhoud.js`, daar weggehaald); v140: Watch out over de 6W gecorrigeerd (de cursus zegt 'which factors or how', vrijwel gelijk aan 'what is the cause') |
+| `drm-h4.js` | DRM Verhoeven H4 (central question en objective, Van Tulder A14 en A15, Kahneman), les-id `ch4`, staat in de groep Boek; Engels met To remember en Quick recap; nieuw in v140 |
+| `faw-college-1.js` | FAW sessie 1: paragrafen en topic sentences (uit de slides en worksheets) |
+| `faw-college-2.js` | FAW sessie 2: de zes technieken en de academische samenvatting |
+| `faw-summary.js` | FAW naslag: How to write an academic summary (stap voor stap, uitgewerkt voorbeeld, oefenartikel); nieuw in v107 |
+| `faw-college-3.js` | FAW sessie 3, Style of academic writing (Hackett): de 16 regels, feedback task 1; nieuw in v113 |
+| ~~`faw-writer-responsible.js`~~ | Vervangen door `faw-college-2.js` in v92; het bestand kan uit de repo |
+| `sw.js` | Offline-cache, netwerk eerst |
+| `manifest.webmanifest` | Naam en kleur op het beginscherm |
+| `manuals/` | Zes module-pdf's, één per vak |
+
+### Scriptvolgorde — dit luistert nauw
+
+In alle drie de html-bestanden, in precies deze volgorde:
+
+```
+rooster.js
+app.js
+lesblokken.js
+lesstof.js
+ssms-inhoud.js
+intro-college-1.js          <- losse lesbestanden hier
+intro-college-3.js
+intro-college-5.js
+intro-h7.js
+intro-h9.js
+governance-college-1.js
+governance-college-2.js
+governance-college-3.js
+governance-college-4.js
+governance-college-5.js
+governance-college-6.js
+governance-college-7.js
+ps-college-1.js
+ps-college-2.js
+ps-college-3.js
+ps-college-4.js
+ps-college-5.js
+ps-college-6.js
+ps-midterm-1.js
+ps-midterm-2.js
+drm-conceptlist-1.js
+drm-conceptlist-2.js
+drm-conceptlist-3.js
+drm-college-2.js
+drm-college-4.js
+drm-college-5.js
+drm-h3.js
+drm-h4.js
+faw-college-1.js
+faw-college-2.js
+faw-summary.js
+faw-college-3.js
+society-college-1.js
+society-college-2.js
+society-college-3.js
+society-college-4.js
+society-college-5.js
+society-college-6.js
+society-college-7.js
+society-college-8.js
+recap-society.js            <- recaps na de lesbestanden
+recap-professional-skills.js
+recap-governance.js
+recap-intro.js
+overview-intro.js
+vakken.js
+vak.js of les.js            <- deze tekenen METEEN bij het laden
+```
+
+`vak.js` en `les.js` roepen `start()` aan zodra ze geladen zijn. Alles wat
+inhoud levert moet er dus vóór staan. Een nieuw lesbestand achteraan zetten
+betekent dat het netjes inlaadt en vervolgens genegeerd wordt.
+
+## 3. Hoe een vak wordt opgebouwd
+
+`vakken.js` bouwt alle vakken uit drie bronnen:
+
+1. **Colleges** — één onderdeel per sessie, afgeleid uit `VAK_VOORBEREIDING`
+   in `ssms-inhoud.js`. Titel wordt `Sessie N · <onderwerp>`, met de
+   voorbereiding als grijze regel eronder.
+2. **Lecture slides** — uitgewerkte collegeslides, in `SLIDES` in `vakken.js`.
+   Tellen niet mee voor de voortgangsbalk (zie `teltMee` in `app.js`, dat
+   filtert op de groepsnaam `Lecture slides`).
+3. **Eigen groepen** — boek, opdrachten, naslag, in `BOEKEN` en `EXTRA`.
+
+Sessies per vak: Intro 16, Governance 16, Society 16, DRM 13, FAW 8,
+Professional Skills 11.
+
+Boekhoofdstukken koppel je aan een sessie via `lesIds` in
+`VAK_VOORBEREIDING`; `vakken.js` plakt die lesstof dan samen tot één
+lespagina onder `college-N`. Bij Intro gebeurt dat voor sessie 2 (H1+H2),
+4 (H3+H5), 6 (H7+H9) en 8 (H10). De rest staat onder "Overige hoofdstukken".
+
+### Samenvoegen van hoofdstukken (`voegSamen` in `vakken.js`)
+
+Tabbladen met hetzelfde id worden samengevoegd. Daarom krijgt elk hoofdstuk
+zijn eigen kernstof-tab: `kern`, `kern2`, `kern3`. Twee dingen die daar sinds
+september 2026 in zijn geregeld:
+
+- Een scheidingskopje met de hoofdstuknaam komt er alleen als een tabblad
+  inhoud van **twee** hoofdstukken mengt. Tabbladen van één hoofdstuk,
+  zoals `kern2`, krijgen die kop niet.
+- De tabvolgorde staat vast via de lijst `VOLGORDE`: voor, kern, kern2,
+  kern3, kern4, toepassen, checken, kaarten. Zonder die lijst belandde
+  `kern2` achter Checken.
+
+## 4. Deadlines, sessies en achterstand
+
+In `app.js`:
+
+- `SEMESTER_START = new Date(2026, 8, 7)` — maandag 7 september. Alles in het
+  rooster van vóór die datum telt niet als sessie.
+- `VAK_START` — per vak een afwijkende startdatum, nu leeg.
+- `sessiesVan(vakId)` — de sessies van een vak, ontdubbeld per dag. Zowel de
+  eerstvolgende voorbereiding als de achterstand gebruiken deze functie.
+- `achterstalligeVoorbereiding(nu)` — voorbereidingen van sessies die al
+  geweest zijn en niet zijn afgevinkt. Slaat `leeg`-sessies over, en sessies
+  waarvan alle gekoppelde lesstof al is afgevinkt.
+
+Op het homescreen:
+
+- Eigen deadlines: altijd, hoe ver weg ook
+- Toetsen uit het rooster: pas vanaf 14 dagen (`TOETS_VENSTER`)
+- Voorbereiding: die van het eerstvolgende college, één per vak
+- Achterstand: bovenaan, met "x dagen te laat"
+- `GEEN_TOETS` in `rooster.js` bevat `['demo']`, om een demo-toets te filteren
+
+**Afvinken op het homescreen** (nieuw sinds v63). Elke deadlineregel heeft
+links een rondje. Voorbereiding en achterstand gaan via `zetVoorAf`, eigen
+deadlines krijgen `af: true` in de lijst van hun vak, net zoals de vakpagina
+dat doet. Toetsen uit het rooster krijgen geen knop; daar staat een lege
+`.dl-vink-leeg` zodat de regels uitgelijnd blijven. De handler
+`vinkDeadlineAf(code)` zit in `app.js` en staat in de globale click-handler
+vóór de `[data-vak]`-afhandeling, anders opent de regel het vak.
+
+## 5. De lespagina — vaste opzet
+
+Vijf tabbladen: Before you start, Core material (per hoofdstuk), Applying it,
+Check yourself, Flashcards.
+
+Het laatste wordt automatisch gemaakt door `metFlashcards()` in `les.js`, uit
+alle `begrippen`- en `flashcards`-blokken, zonder dubbele termen. Flashcards
+zijn geen omdraaikaarten maar blokken: links de term, rechts de definitie,
+allebei aan te tikken om alleen dat stuk te kopiëren.
+
+### De kopjesbalk
+
+Kernstof wordt bij het tekenen opgesplitst in kopjes. Dit gebeurt in de
+weergave, niet in de inhoud.
+
+- Een nieuw kopje begint bij elk blok met een titel
+- Blokken zonder titel horen bij het kopje erboven
+- Bij minder dan twee titels blijft het tabblad heel
+- **Sinds v76: alleen tabbladen waarvan het id begint met `kern` krijgen een
+  kopjesbalk.** Op Voorbereiding, Toepassen en Checken is een titel dus
+  gewoon een kop boven een blok. Dat staat in `stukkenVan()` in `les.js`.
+
+Bovenaan een compacte balk: pijl terug, naam van het huidige kopje met
+teller, pijl vooruit, en een pijltje om de balk in te klappen. Tik op de naam
+en de volledige lijst klapt open, met per kopje een bolletje om het weer op
+open te zetten. Onderaan elk kopje één knop rechts: Afvinken en verder.
+
+Niets mag springen. Elke actie tekent het tabblad opnieuw; `zonderSprong()`
+zet de scrollpositie terug. Voeg je een actie toe, gebruik die functie dan ook.
+
+### Het tabblad "To remember" (recap, sinds v81)
+
+Een zesde tabblad met de echte kernprincipes van de les op een rij: tabellen
+en korte uitleg, afgesloten met een `hardop`-blok "Say it out loud". Id
+`recap`, titel `To remember`. Het staat direct na de laatste kernstof-tab.
+
+De recaps staan niet in de lesbestanden zelf maar per vak in een eigen
+bestand (`recap-society.js`, later `recap-intro.js` enzovoort), met per les
+`voegRecapToe('<vak>/<les>', { id: 'recap', ... })`. Die functie staat in
+`lesstof.js`. Het recap-bestand moet dus **na** de lesbestanden en **voor**
+`vakken.js` laden. Omdat het id niet met `kern` begint, komt er geen
+kopjesbalk. `recap` staat ook in `VOLGORDE` in `vakken.js`, zodat een recap
+die aan een boekhoofdstuk hangt bij samenvoegen op de goede plek komt.
+
+Stand: Society (college-1, college-2, college-3), Professional Skills
+(college-1, college-2) en Governance (college-1, college-2) hebben een recap.
+De recap van Governance sessie 1 dekt boek en college samen. Intro: slides-1 (sessie 1),
+H1+H2 (sessie 2) en H3+H5 (sessie 4). Bij Intro hangt de recap aan het
+hoofdstuk; vakken.js voegt ze per sessie samen tot één To remember-tab, met
+de hoofdstuknaam als tussenkop. Intro sessie 6: H7 heeft een recap (en is vertaald), H9 volgt. Nog te doen:
+Intro sessie 8 (H10), DRM, FAW.
+
+### Vertalen naar het Engels
+
+Afspraak: alle lesstof wordt Engels, de bedrading blijft Nederlands. Klaar:
+Intro H1, H2, H3, H5, H7 en (sinds v91) H9. Nog Nederlands: Intro slides-1, H4,
+H6, H8, H10, H11, de studiegids, DRM en FAW. Werkwijze bij vertalen: het
+hoofdstuk uit `ssms-inhoud.js` halen, als eigen bestand `intro-h<n>.js`
+opnieuw opbouwen via een builder met JSON.stringify, scripttag toevoegen in
+de drie html-bestanden en in `sw.js`, en de naam in `BOEKEN` in `vakken.js`
+meevertalen.
+
+### Inhaalwerk op het homescreen (v96)
+
+Achterstallige voorbereiding stond tussen de gewone deadlines en verdrong die.
+Sinds v96 splitst `render()` in `app.js` de lijst: alles met `achterstallig`
+gaat in `inhaalBlok()`, de rest blijft een gewone rij via `dlRij()`. Dicht
+toont het blok het aantal, het aantal vakken, hoe oud het oudste item is en
+een regel "Begin bij ...". Open staat de hele lijst erin, met de vinkjes die
+er altijd al waren. De stand staat in localStorage onder `ssms-inhaal`, en de
+teller boven het blok zegt nu "3 open \u00b7 7 in te halen".
+
+### Bewaarde antwoorden (v95)
+
+`les.js` bewaart nu ook de gegeven **quizantwoorden**, naast de notities en de
+eigen antwoorden bij oefeningen. Sleutel: `<basis>-<tabId>-quiz<n>-v<i>`. Bij
+het openen van een tabblad zet `laadQuiz()` de gekozen opties terug, inclusief
+uitleg en score; `antwoordQuiz(knop, hersteld)` slaat alleen op als de klik van
+de gebruiker komt.
+
+### Vaste onderdelen die bij elke les meegenomen worden
+
+- een blok **"If you are short on time"** in Voorbereiding: wat lees en doe je
+  eerst, in volgorde, met een tijdsindicatie;
+- naast begripkaarten ook **lijstkaarten** in de flashcards: genummerde
+  opsommingen met uitleg per punt (de vijf ethiekprincipes, de tien fallacies,
+  enzovoort).
+
+### Zoekbalk en inklapknop (v85)
+
+De zoekbalk in de les (`.leszoek-veld`) heeft dezelfde vorm als die op het
+homescreen: pil, eigen vlak, schaduw, rondje als icoon. Hij staat sinds v86
+in de bovenbalk zelf: klikken op het zoekknopje zet `hidden` van
+`#leszoekVeld` uit en geeft `.les-top` de klasse `zoekt`, waarna het veld de
+vrije breedte vult. De resultaten staan eronder in `#zoekUit`. Onder 560px
+verdwijnt de Terug-link zolang er gezocht wordt. Op het homescreen
+zitten de zoekbalk en de twee knoppen in `#toolsGroep`; de pijlknop
+`#toolsInklap` klapt die groep in en uit. De stand wordt bewaard in
+localStorage onder `ssms-tools`, en bij inklappen wordt het zoekveld geleegd.
+In een les doet **één** knop dit werk: `#balkKnop`, die `lesextra.js` zelf in
+de balk zet. Sinds v90 klapt die knop niet alleen de bovenbalk in (`.les-top`
+krijgt `ingeklapt`) maar ook `#toolsGroep` met het zoekveld en de drie ronde
+knoppen, en hij sluit een openstaand zoekveld. De stand staat in localStorage
+onder `ssms-balk`. Er staat dus geen aparte inklapknop meer in `les.html`; de
+code in `app.js` is alleen voor het homescreen.
+
+### Zoeken binnen een les (nieuw in v77, knop sinds v78)
+
+Boven de tabbladen staat een zoekveld dat de hele les doorzoekt: alle
+tabbladen, alle blokken, alle velden. `tekstVanBlok()` loopt recursief door
+een blok en plakt alle stringwaarden aan elkaar, zodat ook tabelrijen,
+quizuitleg en flashcarddefinities meedoen. `zoekIndex()` bouwt daaruit een
+lijst met per blok het tabblad en, in de kernstof, het kopje. Een treffer
+toont het fragment met de term gemarkeerd; aantikken springt naar dat
+tabblad en zet dat kopje open via `zetKeuze`. Zoeken begint vanaf twee
+tekens, maximaal 25 treffers in beeld. Zit in `les.js`, met het veld in
+`les.html` en de opmaak achteraan `styles.css`.
+
+De balk staat standaard ingeklapt achter het vergrootglas in de knoppenbalk
+bovenin, naast het menu en de licht/donker-knop. `zetZoekOpen()` regelt het
+uitklappen, focust het veld, maakt het leeg bij sluiten en sluit de balk weer
+zodra je een treffer aantikt. Escape sluit hem ook.
+
+### Bloktypes in `lesblokken.js`
+
+`tekst`, `uitleg`, `waarschuwing`, `voorbeeld`, `slimmer`, `hardop`,
+`leerdoelen`, `checklist`, `citaat`, `tabel`, `stappen`, `vergelijking`,
+`flashcards`, `begrippen`, `oefening`, `video`, `quiz`, `preview`, `bronnen`.
+
+Velden: `titel`, `tekst`, `punten`, `toetsstof: true`; `kop` + `rijen` bij
+tabellen; `vraag`/`antwoord`/`niveau` bij oefeningen; `vragen` met `opties`/
+`juist`/`uitleg` bij quizzen; `items` bij begrippen en stappen; `kaarten` bij
+flashcards; `apa` bij bronnen. In `tekst` werkt `**vet**` en `\n\n`.
+
+Let op de veldnamen per type. Een fout veld levert `undefined` op het scherm
+op, zonder foutmelding. `vergelijking` wil `links` en `rechts`, elk een
+object met `titel`, `tekst` en `punten`, en kan dus maar twee kolommen. Voor
+drie kolommen gebruik je `tabel`. `bronnen` wil `apa`, niet `titel` + `tekst`.
+
+## 6. Welke lesstof er nu is
+
+43 lessen, ruim 1.240 blokken.
+
+**Engels** (nieuw geschreven of vertaald):
+
+- Intro to Safety & Security: **Bieder H1, H2, H3 en H5** — sessie 2 (H1+H2)
+  en sessie 4 (H3+H5), elk met een eigen kernstof-tab per hoofdstuk
+- Governance & Policy sessie 1 (McCormick H1, en de slides)
+- Governance & Policy sessie 2 (Buckwalter & Balfour, Quality of Governance H2)
+- Society & Politics sessie 1 (H1, H2, H4 plus lecture 1) en **sessie 2
+  (Macionis H7 plus lecture 2)**, die laatste met 92 flashcards
+- Professional Skills sessie 1 (non-verbale communicatie) en **sessie 2
+  (communicating adverse information)**: twee kernstof-tabs (CAT; kanalen,
+  medium en barrières), 76 flashcards
+- DRM conceptlijst, drie delen, onder Extra naslagwerken
+- FAW: writer responsible writing, sinds v80 de les van **sessie 2**
+  (nog in de oude opzet: 15 kopjes, geen begrippenblok)
+- Society & Politics **sessie 3 (Macionis H11 plus lecture 3)**, 10 kopjes, 93 flashcards
+
+**Nog Nederlands:**
+
+- Intro: Bieder H4 en H6 t/m H11
+- DRM: H3, H4, H5, H13 uit Verhoeven
+- FAW: naslag, rubric, één oefening
+- Professional Skills: de drie opdrachten
+- Studiegids: 11 onderdelen. Hoeft niet vertaald te worden.
+
+Programma's uit de Year 1 manual staan voor alle zes vakken. Module manuals
+staan voor alle zes in `manuals/`, met deze namen:
+
+```
+Y1_manual_intro_ssms.pdf
+Y1_manual_governance_policy.pdf
+Y1_manual_society_politics.pdf
+Y1_manual_drm.pdf
+Y1_manual_FAW.pdf
+Y1_manual_professional_skills.pdf
+```
+
+De paden staan in `VAK_MANUAL` in `ssms-inhoud.js` en moeten **letterlijk**
+kloppen. Spaties in bestandsnamen hebben al één keer een 404 opgeleverd.
+
+## 7. Hoe je iets toevoegt
+
+- **Nieuwe les bij een sessie:** nieuw bestand `<vak>-college-N.js` met
+  `LESSTOF['<vakId>/college-N'] = [ ... ]`, scripttag in de drie
+  html-bestanden op de juiste plek, bestand in `BESTANDEN` in `sw.js`,
+  `VERSIE` ophogen.
+- **Nieuwe collegeslides:** regel in `SLIDES` in `vakken.js` met `slides-2`,
+  lesstof onder `LESSTOF['<vakId>/slides-2']`.
+- **Programma aanpassen:** alleen `VAK_VOORBEREIDING`. De onderdelen en de
+  deadlines volgen vanzelf.
+- **Nieuw boek:** hoofdstukken in `BOEKEN` in `vakken.js`, lesstof onder
+  `LESSTOF['<vakId>/<hoofdstukId>']`, `lesIds` invullen in
+  `VAK_VOORBEREIDING`.
+
+## 8. Werkafspraken met Julie
+
+- Levering altijd als zip, met **alleen de gewijzigde en nieuwe bestanden**.
+  Ze voegt ze toe aan de bestaande repo.
+- **Zip alleen de bestanden van die versie** (Julie houdt zelf bij wat online staat; cumulatief hoeft niet).
+- **Noem de zip naar versie en aanpassing**, bijvoorbeeld
+  `v138-mid-term-en-end-term-op-vakpagina.zip` (Julie, 23 oktober).
+- Zeg expliciet welke bestanden erin zitten.
+- Uitleg in gewone taal, geen jargon zonder toelichting.
+- Zeg meteen als iets volgens jou niet klopt, in plaats van het gewoon uit te
+  voeren.
+- Geen em-dashes, emoji's spaarzaam.
+- Kleine stappen. Mag in meerdere opleveringen.
+- **Lesstof in het Engels**, app-teksten en bedrading Nederlands. Reden: de
+  studie is Engelstalig en ze wil de vaktermen kunnen gebruiken.
+- **Kopjes per paragraaf**, niet fijner. Binnen die kopjes juist uitgebreid.
+- **Flashcards ruim**: alle begrippen uit het hoofdstuk, met echte uitleg per
+  kaart.
+
+## 9. Valkuilen die al een keer hebben toegeslagen
+
+- **Dubbele escapes.** In een JS-bron hoort `\n`, niet `\\n`. Dat laatste
+  levert letterlijk de tekens `\n` op het scherm op. Is 266 keer gebeurd in
+  `society-college-2.js` en 123 keer in `faw-writer-responsible.js`.
+  Controleer met `grep -c '\\\\n' <bestand>`; de uitkomst moet 0 zijn.
+  Eerder zat dezelfde fout in `ssms-inhoud.js` met `\\u00b7`.
+- **`opFeed` in `rooster.js`.** Riep vroeger bij elke aanmelding
+  `autoVakken()` aan, waardoor elk inhoudsbestand het werk van de vorige
+  weggooide. `autoVakken` is nu helemaal verwijderd.
+- **Laadvolgorde.** Zie punt 2. Een lesbestand ná `vak.js` of `les.js` laden
+  betekent dat het niets doet.
+- **`addAll` in `sw.js`.** Ontbrak één bestand uit `BESTANDEN`, dan mislukte
+  de installatie volledig. Nu wordt er per bestand gecachet.
+- **Cache.** `sw.js` is netwerk eerst, cache als vangnet.
+- **Onzichtbare knop.** `.manual-knop` zette de achtergrond op papierkleur
+  terwijl `.btn` de tekstkleur ook op papierkleur zette. Wit op wit.
+- **Zoeken in `ssms-inhoud.js`.** Dat bestand bevat meerdere lessen met
+  dezelfde kopjes. Baken altijd eerst de les af (`LESSTOF['x']` tot de
+  volgende `LESSTOF[`) en zoek pas daarbinnen, met een controle dat er precies
+  één match is. Veiliger nog: laad het bestand in Node, pas het object aan en
+  schrijf alleen dat ene `LESSTOF`-blok terug met `JSON.stringify`.
+- **Lijstjes onder een tekstblok.** Tot v81 toonde het bloktype `tekst`
+  het veld `punten` niet. Drie lijstjes in Governance sessie 1 (de vijf
+  regelmatigheden, de drie kenmerken van politiek, de vier soorten besluiten)
+  waren daardoor onzichtbaar. Sinds v82 rendert `tekst` ook `punten`.
+- **Bestandsnamen van pdf's.** Spaties, komma's en een spatie vóór `.pdf`
+  geven 404's. Alleen letters, cijfers, underscores en streepjes.
+- **Verkeerd boek bij een sessie.** "H2" van het ene boek is niet "H2" van het
+  andere. Bij Governance sessie 2 is McCormick H2 bijna toegevoegd terwijl de
+  verplichte stof Buckwalter & Balfour was. Check de auteur, niet het nummer.
+
+- **Titels in kernstof.** Elk blok met een titel in een `kern`-tab wordt een
+  eigen kopje in de balk. Geef in kernstof alleen de paragraafblokken en de
+  Summary een titel; zet bij kaders de kop vetgedrukt als eerste regel in
+  `tekst`, en laat tabellen en begrippen zonder titel.
+
+## 10. Plan: collegeslides verwerken in de sessie (afgesproken, nog niet gebouwd)
+
+Julie uploadt na elk college de slides. Aparte slides-lessen stoppen we
+mee, want dat is dubbel werk. Werkwijze:
+
+1. Julie zegt vak en sessie. Eerst een korte vergelijking in de chat:
+   wat staat al in de les, wat is nieuw, wat spreekt het boek tegen.
+2. Nieuwe stof die bij een bestaande paragraaf hoort, komt in die
+   paragraaf van Core material, als herkenbaar blok "From the lecture"
+   (voorstel: een eigen bloktype `college`, een kader met dat label, zodat
+   het zichtbaar en doorzoekbaar is).
+3. Stof die nergens bij past, krijgt een eigen kopje achteraan Core
+   material: "From the lecture: <onderwerp>". Geen apart tabblad, dat
+   brengt de dubbeling terug.
+4. De recap krijgt bovenaan een blok "What the lecturer emphasised": waar
+   de docent nadruk op legde is een toetssignaal.
+5. Bestaande slides-lessen worden in de sessieles opgenomen en uit `SLIDES`
+   gehaald. Sinds v101 zijn er geen losse slides-lessen meer.
+6. Zo is het bij Society 2 en 3 gedaan (v100), als voorbeeld voor de rest:
+   een uitleg-blok zonder titel met als eerste regel **From the lecture**,
+   achteraan de paragraaf waar het bij hoort (een blok zonder titel hangt
+   onder het kopje erboven, dus de kopjesbalk verandert niet). Verder: een
+   tijdnood-blok in Before you start, Wooclap- of collegevragen als tweede
+   quiz in Check yourself (na de bestaande quiz, zodat opgeslagen
+   antwoorden blijven kloppen), eventuele opdrachten van de docent als
+   oefening, en lijstkaarten als begrippen met "(list)" in de naam. Julie's
+   eigen aantekeningen: wat de docent zei maar niet op de slides stond gaat
+   erin ("your note from class"); fouten in haar aantekeningen worden in de
+   chat genoemd en waar nodig als "Watch out" in de les.
+
+## 9b. Begrippen om overheen te hoveren (v106)
+
+Julie wil dat begrippen in de lopende tekst een pop-up met de definitie
+krijgen, met term en definitie los te kopiëren (zoals de flashcards). Dat
+werkt sinds v106 zo:
+
+- In een tekst schrijf je `[[Term]]` of `[[zichtbare tekst|Term]]`.
+  `rijkeTekst` (lesblokken.js) maakt daar een woord met een stippellijn van;
+  hover of tik toont de pop-up. Kopiëren loopt via de bestaande
+  `data-kopieer`-afhandeling in les.js.
+- De definitie komt uit de begrippenblokken van **dezelfde les**
+  (`zetHoverBegrippen`, aangeroepen in les.js). Staat de term er niet in,
+  dan blijft alleen de zichtbare tekst over, zonder haken.
+- De zoekfunctie haalt de markering weg (`zonderHoverMarkering`).
+- Stijl: onderaan styles.css, in de huisstijl van de app. **Niet** de
+  opmaak van Julie's voorbeeldscreenshot overnemen.
+- Toegepast in: Governance sessie 4 (59 markeringen: per kopje de eerste
+  vermelding van elk begrip, niet in tabellen en lijstkaarten). Het script
+  daarvoor stond in de chat; kort: per kern-tab, per kopje, de eerste
+  hele-woordtreffer (meervoud mag) van elk begrip uit de les, langste
+  begrippen eerst, nooit binnen een bestaande markering.
+- **Nieuwe lessen krijgen deze markering voortaan ook.** Bestaande lessen
+  alleen als Julie erom vraagt.
+
+## 9c. "In plain words" in elke nieuwe les (v114)
+
+Julie wil voortaan in **elke nieuwe les** per kopje van de kernstof een
+kader "In plain words": drie of vier zinnen in heel eenvoudig Engels (altijd
+Engels, ook als de chat Nederlands is), alsof je het uitlegt aan iemand die er
+nooit van gehoord heeft. Type `slimmer`, zonder titel (anders wordt het een
+kopje), eerste regel `**In plain words**`, direct na het eerste tekstblok van
+het kopje. Eerst toegepast in Governance sessie 5. Bestaande lessen alleen
+als Julie erom vraagt.
+
+Op verzoek bijgewerkt (v118): Intro sessie 6 (`intro-h7.js`, `intro-h9.js`) heeft nu ook een tijdnood-blok, In plain words per kopje en hover-begrippen.
+
+**Werkafspraak (Julie, 12 okt):** controleer bij elke upload of het het juiste bestand is (programma, hoofdstuk, aankondiging), en meld afwijkingen. "Cut the deliverables" betekent: opsplitsen in aparte leveringen, niets weglaten.
+
+## 9d. Alle lessen op standaard brengen (gestart 12 okt, v122)
+
+Julie wil dat **elke** les de nieuwste standaard krijgt, zonder materiaal
+te verwijderen, zonder de opbouw te veranderen en zonder iets in de app
+te breken. De standaard:
+- **"If you are short on time"** in Before you start (als die ontbreekt);
+- **"In plain words"** per kopje van de kernstof (altijd Engels, 3-4 zinnen,
+  type `slimmer`, direct na het eerste tekstblok van het kopje);
+- **hover-begrippen** (`[[Term]]`, eerste vermelding per kopje, script
+  markeer.js; slaat begrippen over die in dat kopje al gemarkeerd zijn);
+- **geen em dashes** in de tekst;
+- een **To remember** (recap) waar die ontbreekt.
+**Let op (12 okt):** de werkmap van Claude is tussendoor gewist; de scripts zijn opnieuw gemaakt en de live repo op GitHub is de basis. Haal bij een nieuwe sessie altijd eerst de repo op via codeload.github.com/juul1703/ssms/zip/refs/heads/main.
+Werkwijze: upgrade-script (alleen bestanden met één LESSTOF-toewijzing;
+lessen in `ssms-inhoud.js` via slice-vervanging zoals bij Intro sessie 4),
+daarna integriteitscheck: elk oud blok moet ongewijzigd terug te vinden zijn
+(op hover-markering en em dashes na), en een browsertest.
+
+**Klaar (v122):** PS sessie 1, 2, 3, 4. **Klaar (v123):** Governance sessie 1, 2, 3, 4. **Klaar (v124):** Society sessie 1 tot 5. **Klaar (v125):** FAW sessie 1, 2, 3 en de summary-gids. **Klaar (v127):** Intro intro-college-1 en -3. **Klaar (v128):** Intro H1, H2, H3, H5, H10 (in `ssms-inhoud.js`; rest van het bestand byte-voor-byte gelijk). H10 is nog Nederlands en heeft nog geen recap: komt mee met de vertaling. **Klaar (v129):** DRM college-2, college-4, conceptlist-1/2/3, en ch3, ch4, ch5, ch13 (ch-lessen nog Nederlands, nog geen recap: komt mee met de vertaling). (Al op standaard: PS 5, 6, midterm 1
+en 2; Governance 5, 6; Society 6; Intro 5, H7, H9; DRM college-5.)
+
+**Nog te doen, in deze volgorde:**
+1. ~~Governance sessie 1 tot 4~~ klaar (v123).
+2. ~~Society sessie 1 tot 5~~ klaar (v124).
+3. ~~FAW sessie 1, 2, 3 en de summary-gids~~ klaar (v125).
+4. ~~Intro~~ klaar (v127, v128), behalve de recap van H10 (bij de vertaling).
+   (tijdnood-blokken ontbreken; em dashes in h1, h2, h3; h10 mist een recap).
+5. ~~DRM~~ klaar (v129), behalve de recaps van ch3-ch13 (bij de vertaling). Oorspronkelijk: college-2, college-4, conceptlist-1/2/3, en ch3, ch4, ch5, ch13 in
+   `ssms-inhoud.js` (tijdnood-blokken en recaps ontbreken; em dashes in ch4).
+   Let op: ch3 t/m ch13 en Intro h10 zijn nog Nederlands (vertalen staat
+   apart op de lijst); de In plain words-kaders wel in het Engels.
+6. ~~Studiegids em dashes~~ niet nodig (Julie, 12 okt).
+7. ~~Intro H10 vertalen~~ klaar (v130): volledig Engels, recap-tab, quiz van 8 vragen, bronnen, 2 lijstkaarten erbij; titel in vakken.js nu Engels.
+8. DRM-hoofdstukken vertalen naar het Engels, met To remember en Quick recap. Werkwijze (v139): het hoofdstuk wordt een eigen bestand `drm-h<n>.js` met hetzelfde les-id (`ch<n>`), het blok gaat uit `ssms-inhoud.js` (de rest blijft byte-voor-byte gelijk), scripttag na `drm-college-5.js`, en de naam in `BOEKEN`. Kadertitels in de kernstof weggehaald zodat er alleen echte kopjes in de kopjesbalk staan. Watch out-kaders waar het boek afwijkt van de conceptlijst (6W, preliminary versus background research). ~~ch3~~ klaar (v139). ~~ch4~~ klaar (v140), met Watch out-kaders over problem statement versus de vier termen van de conceptlijst, en negen (boek) versus acht (conceptlijst) vraagtypes. **Volgende:** ch5 (v141), daarna ch13.
+
+## 9e. Volgende-knop vinkt af (v126)
+
+Op verzoek van Julie: de knop **Volgende** onderaan een tabblad vinkt dat
+tabblad nu ook af (alleen aanzetten, nooit uitzetten). Eén wijziging in
+`les.js` (functie `vinkHuidigAf`), geldt voor alle lessen. De knop
+"Onderdeel afvinken" werkt zoals voorheen (aan/uit).
+
+## 9f. Quick recap per sessie (v131 proef, v133 standaard)
+
+Julie wil bij **elke sessie** een tabblad **Quick recap** (id `overview`): het hele
+college als verhaal in heel makkelijke, licht Gen Z-achtige maar nauwkeurige
+taal, uitgebreider dan To remember, afgesloten met "If you only remember ...".
+Geleidelijk toevoegen, niet alles in een keer. In `vakken.js` staat `overview`
+in VOLGORDE direct na `recap`: volgorde Core material, To remember, Quick recap.
+Bij samengevoegde sessies (Intro) krijgt elk hoofdstuk een eigen `overview`-tab;
+die worden samengevoegd met hoofdstukkopjes. Klaar: Governance 5, 6 en 7, Society 6, 7 en 8,
+Intro 1 t/m 6 en 8 (alles met een les), PS 6, DRM H3 en H4.
+Sinds v141 bestaat `voegOverviewToe(sleutel, tab)` in `lesstof.js`: zet een
+Quick recap direct na To remember (of na de laatste kernstof-tab). Voor lessen
+die nog geen Quick recap hebben, komt die per vak in een eigen bestand
+(`overview-intro.js`, later ook voor Governance en Society), geladen na de
+recap-bestanden en voor `vakken.js`.
+
+## 9g. Zoeken in een les en verborgen hoofdstukken (v136)
+
+**Zoeken:** de resultaten hangen nu vast onder de zoekbalk (`#leszoek` is
+`position:fixed`, geplaatst door `plaatsZoekUit()` in `les.js`), dus je hoeft
+niet terug te scrollen. Een klik op een treffer opent het tabblad en kopje,
+springt naar de treffer zelf en laat die ongeveer 5 seconden oplichten
+(`markeerTreffer()`, CSS `mark.zoek-hl`).
+
+**Hoofdstukken:** in `vakken.js` werd een hoofdstuk uit `lesIds` als
+'gebruikt' gemarkeerd, ook als de sessie al een eigen les had en het
+hoofdstuk dus niet werd samengevoegd. Daardoor was DRM H4 (Verhoeven) nergens
+zichtbaar. Nu alleen 'gebruikt' als het echt is samengevoegd; H4 staat onder
+Boek op de vakpagina van DRM.
+
+## 9h. Mid-term en end-term op de vakpagina (v138)
+
+Julie koos optie B: op de vakpagina staan de sessies onder Colleges per toets
+onder een eigen kopje. Configuratie in `TOETSBLOKKEN` bovenaan `vakken.js`
+(globale variabele, buiten de IIFE), weergave in `toetsBlokkenHtml()` in
+`vak.js`, opmaak `.toetsblok` achteraan `styles.css`.
+
+- Intro, Governance, Society: Mid-term (sessie 1-8) en End-term (9-16).
+- DRM: CT1 (1-8), CT2 (9-11), CT3 (12-13), want de toets is cumulatief in drie delen.
+- PS: Mid-term (1-7, opdrachten week 10) en End-term (8-11, presentatie week 20).
+- FAW: één examen, dus geen blokken.
+
+Regel: het blok waarvan `einde` (de vrijdag van de toetsweek) nog niet voorbij
+is, is het huidige blok. Dat blok en alle eerdere staan open,
+latere blokken zijn ingeklapt. Geen labels als "nu" of "later" (Julie): de
+kopjes heten gewoon Mid-term en End-term (bij DRM CT1, CT2, CT3). Na de toetsweek schuift het
+vanzelf door, en omdat eerdere blokken open blijven, staat bij de end-term
+alles open. Zelf open- of dichtklappen wordt onthouden in localStorage
+(`ssms-toetsblok-<vak>-<blok>`), samen met het huidige blok; begint een nieuw
+blok, dan gelden de standaarden weer. Datums: Y1 manual, DRM manual, PS manual
+(week 10 = 9-13 nov 2026, week 15 = 14-18 dec, week 20 = 1-5 feb 2027).
+
+## 9j. Intro-controle (v141)
+
+Automatische controle van Intro sessie 1-8 (dubbele tabs en begrippen,
+hover zonder begrip, quiz-antwoorden, lege oefeningen, em dashes,
+Nederlandse resten, zichtbare `**` of `[[` op het scherm, JavaScript-fouten).
+Gevonden en hersteld:
+
+- **Drie sterretjes** (`***`, vet met cursief erin) worden niet goed weergegeven:
+  je zag losse `**`. Hersteld in `intro-college-5.js`, `governance-college-2.js`
+  en `governance-college-6.js` (cursieve titel nu buiten het vette deel). Elders
+  komt het niet voor; schrijf voortaan `**Auteur (jaar)**, *Titel*`.
+- **Onjuiste In plain words**: sommige samenvattingen uit de standaardronde
+  (v122-v127) klopten inhoudelijk niet met de tekst erboven. Hersteld:
+  sessie 1 (drie werelden, de vier definities, oude en moderne risico's,
+  onzekerheden), sessie 3 (de vijf intervention challenges, de negen
+  informatiecriteria, de vier conclusiepunten), H1 1.5 en H2 2.4. De rest van
+  Intro is nagelopen en klopt. **Let op bij andere vakken: dit kan daar ook
+  spelen.**
+- **H1 en H2 hadden geen lijstkaarten**: tien toegevoegd (via
+  slice-vervanging in `ssms-inhoud.js`; de rest van het bestand blijft gelijk).
+- Lege `tekst`-blokken in samengevoegde sessies zijn de hoofdstukkopjes van
+  `voegSamen()`: geen fout. "TBD" in H3 komt uit het boek (STPA-voorbeeld).
+
+## 9k. Bron-controle Intro (v143)
+
+Julie leunt volledig op de app voor haar toetsen: **inhoud moet kloppen met de
+bron**. Werkwijze per les: (1) elke samenvatting (In plain words, Quick
+recap, To remember, flashcards, quiz-uitleg, modelantwoorden) naast de
+kernstof; (2) de kernstof naast de originele bron (slides met sprekersnotities,
+het boek).
+
+Gedaan in v143:
+- **Slides 1, 3 en 5** (pptx met sprekersnotities, van Julie) naast
+  `intro-college-1.js`, `-3.js` en `-5.js` gelegd. Sessie 5 klopt. Sessie 1 klopt, op
+  de klimaatketen na (dia 17 is een afbeelding): die staat nu exact zoals op de
+  dia, met de dwarsverbanden naar migratie, en zonder 'mortality' (de dia zegt
+  population growth rate and population size).
+  Sessie 3 had een echte fout: volgens de sprekersnotities zijn er **drie
+  communicatievormen** over de keten gelegd: risk communication (proaction,
+  prevention, preparation), **crisis communication als breedste pijl (voor,
+  tijdens en lang na de crisis)** en evaluation (repression tot recovery). De les
+  zei dat crisis communication alleen tijdens en na liep. Hersteld in de
+  kernstof, In plain words, flashcard, tabel, quiz-uitleg, checklist en de Quick
+  recap. Ook toegevoegd: de keten is een **gesloten kringloop** (recovery voedt
+  prevention van de volgende ronde), en de vraag van de docent welke twee
+  criteria het moeilijkst samengaan (**complete en up to date**).
+- **Alle quizvragen** van Intro sessie 1-8 (135) nagelopen: juiste antwoorden
+  kloppen met de kernstof.
+- **Alle lijstkaarten en de gewone flashcards** nagelopen. Swiss cheese-kaart
+  (H3) preciezer gemaakt.
+- **Alle modelantwoorden** van sessie 1-4 gelezen; de bewering over de
+  Noorse petroleumbedrijven in H5 klopt met het boek (Jore, 5.7).
+- **H5 (Jore) naast de echte hoofdtekst** gelegd (Springer-pagina,
+  open access): klopt. Opmaakfout hersteld: de vijf kenmerken van een sterke
+  security culture stonden als drie stappen plus losse tekst "4." en "5.".
+
+**v144: Bieder H1, H2, H3, H5, H7, H9 en H10 tegen het boek.** Het boek staat
+als tekst in de Project-bestanden (`/mnt/project/The_coupling_of_safety_and_security.pdf`,
+eigenlijk platte tekst; splits op regels `Chapter N`). Automatisch gecheckt:
+alle jaartallen, getallen, citaten en auteursnamen in de kernstof; daarna de
+definities en lijsten met de hand (vier consequenties H1, definities en 90 graden H2,
+tabellen 7.3 en 7.6 H7, synergieën H9, vier interdependencies H10). Klopt, op drie
+letterlijke citaten na, hersteld: 'eternal killjoys' (H1, was spoilsports),
+'connecting dots' (H10, was connecting points) en 'at a cursory level' (H7, was
+'cursory alignment' tussen aanhalingstekens). Voorbeelden die niet uit het boek
+komen (nooddeur, klep in de waterzuivering) staan als voorbeeld gelabeld.
+Niet gedaan: modelantwoorden van sessie 5, 6 en 8 regel voor regel.
+
+**v145: modelantwoorden Intro sessie 5, 6 en 8 regel voor regel** (tegen kernstof,
+boek en, sinds Julie ze in het Project zette, de Intro-slides 1-5 en `sessie_6_iss_.pdf`).
+Let op: de Intro-slides heten `_1__...pptx` t/m `_5__...pptx` (platte tekst);
+`Lecture_1-5.pptx` in het Project zijn van **Society**. Hersteld:
+- **Slides wijken af van het boek** (sessie 5): "In safety we trust, in security we
+  distrust" staat op de slide van Brooks en Coole, maar is in het boek een kopje van de
+  redacteuren (H11, 11.2.3); "statistiek werkt, een tegenstander bedenkt nieuwe tactieken"
+  staat op de slide bij Wipf, maar is Blokland en Reniers (H2, 2.4.3). Nieuw Watch out-kader
+  na de tabel van positie 2; quiz-uitleg, To remember-tabel, Quick recap en modelantwoord
+  noemen nu beide.
+- **Verzonnen citaat in H9-kernstof**: "I am in unstudied conditions here" staat niet in het
+  boek. Nu: precursor conditions en drift (9.1), en de echte zinnen "I find myself in
+  uncharted territory" / "I'm not comfortable taking this action" (9.3, ook op de slide).
+  Flashcard Unstudied conditions en modelantwoord mee hersteld.
+- H7: "directed" werd "purposive intent" (kernstof en antwoord); "ergonomics" eruit (staat
+  niet in H7); Nederlandse voorbeelden en tegenkrachten gelabeld als eigen argument.
+- Sessie 5: Jore letterlijk geciteerd; "wat kwam eerst in een ziekenhuis" gelabeld als eigen
+  argument. H9: "convenient" en de just culture-zin preciezer. H10: "captured terrorists
+  (allegedly)", "personal grievance and willingness to take revenge", worker participation.
+Nog niet tegen slides: sessie 8 (H10), want die slides staan niet in het Project.
+
+**v146: Intro mid-term-les, deel 1** (`intro-midterm.js`, les-id `midterm`). Staat via
+`EXTRA` in vakken.js in de groep Colleges met `toetsblok: 'mid'`; vak.js zet een les met
+`toetsblok` in dat blok (nieuwe regel in toetsBlokkenHtml). Tabs: Before you start, Core
+material (kopje per sessie 1-8 plus "The threads"), To remember, Quick recap. Opgebouwd uit
+de gecontroleerde sessielessen; steekproeven tegen slides 1, 2, 3 en 5. Sessie 7 (gastcollege)
+en de recap-slides van sessie 8 ontbreken in het Project en staan als gat in de les. De
+oefentoets (Applying it, Check yourself) volgt in v147.
+Bij het bouwen nog gevonden en hersteld: H7 kernstof "Safety leans on ergonomics,
+occupational medicine..." (niet in H7) en To remember-tabel H7 ("directed",
+"ergonomics"); H10 kernstof "That is the bridge Boustras builds" (meten met surveys,
+climate, reporting structures staat niet in H10; zijn eigen voorstel is worker
+participation via de health and safety committees), ook in To remember en Quick recap.
+
+**v147: Intro mid-term-les, deel 2: de oefentoets.** Check yourself: twintig nieuwe
+MC-vragen (toepassen, scenario's, vakoverstijgend), antwoordposities gespreid, in de
+browser 20/20 bij de juiste antwoorden. Applying it: drie open examenvragen (festival,
+Germanwings door het hele vak, In Amenas met Jore en Boustras). Bouwscripts staan niet in
+de repo; de les is gewoon JSON in `intro-midterm.js`.
+Ook hersteld: In Amenas heet in het boek een **oil facility** ("Algerian oil facility",
+grootste aanslag in de olie- en gasindustrie); de lessen zeiden "gas facility" of "gas
+plant" (H5-kernstof en begrip, Quick recap, To remember, sessie 5).
+
+**v148: Vaardigheden-uitleg ("Zo doe je dit"), Intro deel 1.** Audit: bijna alle lessen van
+alle vakken hebben leerdoelen als kale string, dus zonder uitleg in de tab Vaardigheden. Alleen
+Intro sessie 1 en H1 hadden ze. Format: een leerdoel is `{"doel": ..., "uitleg": ...}`
+(lesblokken.js, checklist). Nu ook H2, H3, H5 (in ssms-inhoud.js) en sessie 3; daarmee zijn
+sessie 1 t/m 4 compleet. Elke uitleg is geschreven uit de gecontroleerde kernstof. Sessie 1,
+uitleg doel 1: "the oral end-term exam is built on them literally" stond niet in de manual;
+nu de vier leerdoelen uit 2.1.2 en de toetsvorm. Nog te doen voor Intro: H7, H9, H10,
+sessie 5, mid-term-les. Daarna Governance, Society, PS, DRM, FAW (zie audit).
+
+**v149: Vaardigheden-uitleg Intro deel 2** (H7, H9, H10, sessie 5, mid-term-les). Alle
+Intro-lessen hebben nu bij elke vaardigheid een uitleg. Bij het schrijven tegen het boek
+gecontroleerd en daarbij hersteld: H7 zei dat safety "closer" / "further along the road to
+professional status" is dan security; Brooks en Coole zeggen dat **beide** die status nog niet
+hebben (7.4, 7.5). Nu gelabeld als eigen redenering (kernstof, modelantwoord, quiz-uitleg,
+Say it out loud). H7-leerdoel 6 noemde legislation als polarity; de polarity is volgens het
+boek hazards and threats, technologies, underlying theories, legislation is een apart punt.
+Volgende stap: v150, volledige controleronde Intro (citaten en getallen mechanisch tegen
+boek en slides, daarna alle samenvattingen naast de kernstof).
+
+**v150: controleronde Intro, laag 1 (mechanisch) en de Quick recaps.** Methode: alle
+citaten (4+ woorden tussen aanhalingstekens), alle getallen en alle auteur/hoofdstuk-paren uit
+alle Intro-lessen automatisch gezocht in boek, Intro-slides 1-6 en manual (scripts in /tmp,
+niet in de repo). Niet gevonden = met de hand nagelopen. Hersteld: CEO-citaat Schulman
+(was parafrase tussen aanhalingstekens; nu letterlijk "If we're doing a good job of safety
+management that should take care of security too"), "homegrown, radicalized youth" (H10),
+"safety in operation" / "security from external threat" (H1, La Porte), "where the
+likelihood" (H2), het beleidscitaat in H1, het slide-citaat statistiek (sessie 5, mid-term),
+flashcard convenient untruth (reden "convenient" stond als Schulmans woorden), noot dat het
+boek bij Oxford "unsecurity" drukt. Quick recaps: Safety-II, "security events are rare, so
+little feedback" (staat niet in H5; Jore stelt een vraag over extreem lage kans), "security
+gets less attention" (H10), 9/11-cijfers precies volgens het boek ("retired due to health
+effects", niet "early"), low-risk firms.
+Niet te controleren met het Project: letterlijke uitspraken van de docent in sessie 5 (komen uit
+sprekersnotities; de Project-pptx heeft geen notities) en Beck bij sessie 1.
+Laag 2 (To remember, In plain words, flashcards, quiz-uitleg volledig lezen) volgt in v151.
+
+**v151: controleronde Intro, laag 2 deel 1: To remember en alle flashcards** volledig naast
+boek en slides gelezen, plus labels. Afspraak met Julie: wat niet in de Project-bestanden staat
+krijgt het label *(unchecked ...)*; dat geldt voor de letterlijke docentuitspraken in sessie 5,
+Beck in sessie 1 en de term "efficient thinness". Hersteld: H9 "precursors overlappen niet"
+klopte niet; Schulman zegt dat de focus op precursors voor beide missies belangrijk is, maar in
+security beperkt (kernstof-uitleg, modelantwoord, To remember, vaardigheid, mid-term-les).
+Verder: H7 "knowledge is the most stable feature" (boek: primary characteristic), H7 nuance
+gelabeld als eigen, H10 flashcards (injustice, social exclusion), H5 just culture ("not
+transferable" te sterk), H9 deterministic ("only probabilistically" te sterk).
+Opgemerkt voor Governance: een G&P-slide (types of political executives) leest in de
+tekstexport alsof Frankrijk autoritair en China semi-presidentieel is; vermoedelijk een
+kolomverschuiving in de export. Controleren bij Governance.
+Laag 2 deel 2 (alle In plain words en alle quiz-uitleg) volgt in v152.
+
+**v152: controleronde Intro, laag 2 deel 2: alle In plain words (87) en alle quizvragen met
+uitleg (135)** gelezen naast boek en slides. Hersteld: H10 9/11 ("many ill years later",
+"still suffer", "thousands ill" in een quizantwoord; boek: 40.000+ blootgesteld, minstens
+vier doden, honderden met pensioen om gezondheidsredenen), H10 "security gets less attention"
+en "usually to save costs" (staat niet in het boek), H7 "chapter 4 said that" en "safety's
+knowledge is more developed" (niet in het boek), H7 drie keer interpretatie gelabeld, H5 quiz
+"just culture not transferable" en "only one culture", H1 Pettersen en Bjørnskau, H9 de
+reden voor "convenient" (nog een keer), de 9/11-luchtverkeersleiders ("within minutes,
+without a script" staat niet in het boek). Daarmee is de controleronde Intro rond: alle
+samenvattingssoorten zijn gelezen. Wat niet in het Project staat, is gelabeld unchecked.
+
+**v153: Governance sessie 1 en 2 gecontroleerd** (kernstof en alle samenvattingen naast
+McCormick H1, Buckwalter en Balfour en de slides; figuur 2.1 als afbeelding bekeken). Methode:
+citaten, getallen en namen mechanisch; daarna per zin de best passende passage in de bron
+(script /tmp/support.py, venster van 80 woorden), alles met weinig steun met de hand
+nagelopen. Hersteld S1: Foucault "tying someone up is violence" (staat niet op de slide),
+Weber-voorbeelden en "dominant" gelabeld, Jetten-details en "trias politica" gemarkeerd als
+niet uit de bron. S2: "five emergency managers" is vijf benoemingen van vier mensen; self-
+sealing cycle-uitleg gelabeld. Vaardigheden-uitleg S1 (16) en S2 (8).
+
+**v154: Governance sessie 3 gecontroleerd** (H8, H10, slides 3; figuren 10.3 en 10.5 als
+afbeelding bekeken). Citaten letterlijk gemaakt (Bagehot "those which excite and preserve",
+"neutralize", "politics, as a result, comes before policy", World Bank "[and]"). Het blok met
+actualisaties (Carney, Lula, Hasina, Helen Clark, Jetten) staat niet in boek of slides en is
+nu zo gelabeld. Slide 12 (types of executives) leest in de tekstexport alsof Frankrijk
+autoritair is; de les volgt het boek (Frankrijk semi-presidentieel), wat ook de bedoeling van
+de slide moet zijn. Vaardigheden-uitleg S3 (11). Opmaak: vet met cursief erin ("**... *titel*
+...**") breekt de renderer en toonde losse sterretjes; opgelost in S3 en S4. Let op: een
+algemene regex hiervoor raakt ook gewone cursief tussen twee vetgedrukte stukken; niet doen.
+
+**v155: Governance sessie 4 gecontroleerd** (H13, H15, slides 4). Citaten letterlijk: Figuur
+13.2 "wanting to be counted as part of the potential solution...", slide "'steering the ship'
+of state", prompt en veto ("public opinion demands that we do something about traffic
+congestion", "...restrictions on vehicle use"). Actualisatieblok (Trump 2024, Renaissance,
+Lawrence Wong, Sheinbaum, D66 sociaal-liberaal, Jetten) gelabeld als niet uit boek of slides.
+Alle verwijzingen naar "the lecturer's notes" in S3 en S4 (13) gelabeld unchecked, net als de
+voorbeelden van politiek uitgeslotenen. Vaardigheden-uitleg S4 (11).
+
+**v156: Governance sessie 5 gecontroleerd** (Levi-Faur 2012, slides 5). Alle getallen,
+jaartallen en de vier meanings, vijf mechanisms, drie richtingen en vier perspectives kloppen.
+Citaten letterlijk gemaakt (Lynn et al. met komma, Amerikaanse spelling "institutionalized",
+"state-organized", Powell-titel "Neither markets nor hierarchy"). UNESCAP als bron van de acht
+kwaliteiten gelabeld als niet uit slide of tekst. Vaardigheden-uitleg S5 (7).
+
+**v157: Governance sessie 6 gecontroleerd** (Huberts et al., Maia, slides 6). Getallen PI-Index
+(355, 282, 106, 90/39/35, 92%), Nordic research, Thompson, de vijf bases of authority en
+Resolutie 1973 (10 voor, 5 onthoudingen) kloppen. Citaten letterlijk (Luck "performance,
+unity, and control, not equity"; "predictability, stability, and order"). Gelabeld als
+algemene kennis: 9 stemmen voor een besluit, Trusteeship Council inactief sinds 1994. Quiz-
+uitleg expert authority: Maia noemt IMF-economen en IAEA-ingenieurs, niet de WHO.
+Vaardigheden-uitleg S6 (6).
+
+**v158: Governance sessie 7 gecontroleerd** (H16, H17; nog geen slides, het college is nog
+niet geweest). Getallen en voorbeelden kloppen (WANGO 54.000/75%, Civicus 3%, Haïti, Zimbabwe,
+Indonesië, Japan JA, Zweden 11 departementen/4.600, Nordic Council 1952, Tabellen 16.3, 17.2,
+17.3, 17.5). Citaten letterlijk ("following power rather than parties", WANGO "organization").
+SER: boek noemt het "Economic and Social Council". Vaardigheden-uitleg S7 (11). Hiermee zijn
+alle Governance-sessies 1-7 gecontroleerd; volgende stap de Governance mid-term-les.
+
+**v159: Governance mid-term-les, deel 1** (`governance-midterm.js`, les-id `midterm`, via EXTRA in
+het Mid-term-blok). Kopje per sessie 1-7 plus "The threads", To remember (wie, lijsten, cases),
+Quick recap, 18 begrippen, vaardigheden met uitleg. Alles uit de gecontroleerde sessielessen
+(v153-v158); auteurs en jaartallen nog eens in de boeken nagekeken. Sessie 7-slides ontbreken
+(college nog niet geweest). Oefentoets volgt in v160.
+
+**v160: Governance, gat in de controle gedicht.** In v153-v158 waren de In plain words en de
+Quick recaps (overview-tab S5-S7) niet met de hand nagelopen. Nu alle 60+ gelezen naast de bron.
+Hersteld: S3 Weber "treating everyone the same" (staat niet in Figuur 10.3), S6 capacity-based
+authority ("lead groups without an office"; Maia: deference based on perceived competence), S6
+Russisch veto Oekraïne 2022 gelabeld als algemene kennis (artikel noemt 2014). Overige
+gecontroleerd en correct (VVD boven aandeel, Tartus, Russische diplomatie via G8/ASEAN,
+LexisNexis, IMF en Griekenland, Zweedse commissies, ideas rather than policies).
+
+**v161: Governance mid-term-les deel 2: oefentoets.** Twintig nieuwe toepassingsvragen
+(scenario's, vakoverstijgend, geen jaartallen; Julie verwacht vooral begripsvragen), antwoorden
+gespreid, browser 20/20. Drie open examenvragen (noodbestuur na overstroming, global governance,
+veiligheidsbeleid tegen messengeweld). Maia's tekst over principled en capacity-based authority
+van de Veiligheidsraad nagelezen voor vraag 8. S5-quizvraag: "Neither markets nor hierarchy"
+(zo spelt Levi-Faur de titel).
+
+**v162: Society sessie 1 gecontroleerd** (Macionis en Plummer H1, H2, H4, Lecture 1). Let op bij
+bronnen: de pdf's van Society moeten zonder -layout worden geëxtraheerd (twee kolommen). Hersteld:
+"the book's chapter 17 adds anomic and fatalistic suicide" staat niet in H17 of H1-2 en niet op de
+slide; nu gelabeld unchecked. G8/Rusland 2014 gelabeld als algemene kennis. Vaardigheden-uitleg
+S1 (10). Society heeft 78 vaardigheden zonder uitleg; per sessie aanvullen.
+
+**v163: Society sessie 2 gecontroleerd** (H7, Lecture 2) **plus nieuw bestand
+`overview-society.js`** voor de Quick recap-tabs die ontbraken (Society S1-S5; S6-S8 hebben ze in
+het eigen lesbestand). Afspraak met Julie (26 okt): elke les van Intro, Governance en Society moet
+een Quick recap hebben op het niveau van Governance S6: het hele college als verhaal in
+alledaagse, wat jongere taal, uitgebreid en volledig, met "in one breath"-blokken en "If you
+only remember". Ontbreken nog: Society S1, S3-S5, Governance S1-S4; te kort: alle Intro-recaps.
+Volgorde: Society helemaal (inclusief uitgebreide mid-term-les), dan Governance, dan Intro.
+S2: twin-study-slide (afbeelding) en "three invented neighbours" (Julies aantekeningen)
+gelabeld unchecked. Vaardigheden-uitleg S2 (8).
+
+**v164: Quick recap Society sessie 1** in `overview-society.js` (bouwscripts in
+/home/claude/work/sov, niet in de repo). Elke bewering nagekeken in H1, H2, H4 en Lecture 1
+(onder meer 25-40 mensen, 12.000 jaar, drie op de vier in steden, 200 natiestaten, tot 10.000
+talen, 40/90/60 landen, de slide-tag "networks, risk & surveillance", het studieschuld-voorbeeld).
+
+**v165: Society sessie 3 gecontroleerd** (H11, Lecture 3) met vaardigheden-uitleg (10) en Quick
+recap. Gelabeld: Crenshaw en Anderson (algemene kennis, niet in slide of hoofdstuk), Nederlandse
+voorbeelden (etnisch profileren, toeslagenaffaire), plaatjes op slides (Zwarte Piet, Refugees
+Welcome; niet in de tekstexport), en het blok met correcties op het boek (Stephen Lawrence 1993
+tegenover 1995 in de tijdlijn klopt met het boek; Sudan, Rwanda en het moslimcijfer rusten op
+algemene kennis).
+
+**v166: Society sessie 4 deel 1** (H5, het bestaande H16-deel over sociale bewegingen, Lecture 4):
+gecontroleerd, vaardigheden-uitleg (9), Quick recap. Gelabeld: Miner's Nacirema (beeldslides,
+niet in het Project), "strong/weak" bij Sapir-Whorf (boek noemt het twee principes), de
+definitie van social movement in To remember (Macionis-standaard, niet in dit hoofdstuk).
+Deel 2 (v167): H16 compleet maken (macht, staat, politieke systemen, governance) en Quick
+recap en vaardigheden daarop aanvullen.
+
+**v167: Society sessie 4 deel 2: H16 compleet.** Nieuwe tab `kern3` ("chapter 16, part 1: power and
+politics", staat tussen kern en kern2) met 12 secties uit het hele eerste deel van H16: formal politics,
+governance en informele macht; Weber; vier politieke systemen; Singapore; democratie en bureaucratie;
+twee visies op vrijheid; vijf vormen van globalisering van politiek; gender en macht; Europa en de EU;
+drie machtsmodellen (Tabel 16.3); revolutie, terrorisme, oorlog, kernwapens, informatieoorlog. kern2
+heet nu "part 2" en kreeg "the trouble with rights" en de big debate (beyond left and right). 7 nieuwe
+vaardigheden met uitleg, 10 nieuwe quizvragen (29/29 in de browser), 20 begrippen, Quick recap
+aangevuld. Twee slips van het boek gemarkeerd (EHRM is Raad van Europa; 723/732 MEPs; Freedom
+House-percentages tellen op tot meer dan 100). Kernstof per zin tegen H16 gelegd (support-script).
+
+**v168: Society sessie 5 gecontroleerd** (H17, Lecture 5) met vaardigheden-uitleg (11) en Quick recap.
+Gelabeld: het blok met actualisaties (Saudi-Arabië, coffeeshops 5 gram, gesloten Nederlandse
+gevangenissen, ASBO's, Amnesty) als algemene kennis; de Veiligheidsmonitor als eigen toevoeging.
+Society S1-S5 hebben nu allemaal een Quick recap in overview-society.js.
+
+**v169: Intro Quick recaps sessie 2 (h1, h2) en sessie 3 (college-3) herschreven** op de standaard
+(Governance S6): het hele college als verhaal, twee "in one breath"-blokken, "If you only remember".
+Sessie 2 (samengevoegd uit h1 en h2) nu ca. 14.000 tekens, sessie 3 ca. 8.500. Alles uit de gecontroleerde
+kernstof; casusfeiten (Avianca, Korean Air, Manila) opnieuw naast slide 3 gelegd. Ushahidi-achtergrond
+(Kenia 2007-2008) gelabeld als algemene kennis. Bouwscripts in /home/claude/work/iov (zet.py vervangt
+een voegOverviewToe-blok in overview-intro.js). Nog te doen Intro: sessie 1 en 4-8 op dezelfde standaard.
+
+**v170: Society sessie 6 gecontroleerd** (H6, slides 6): kernstof, quiz (20), bestaande Quick recap.
+Dunbar-lagen (5, 15, 50, 150, 500, 1.500) gelabeld als Julies aantekeningen (slide: 100-250 of 150).
+Vaardigheden-uitleg (8). Quick recap uitgebreid van ca. 6.900 naar 11.100 tekens: informele kant
+(Western Electric), McDonald's-geschiedenis en Ritzers kritiek, Kanter, Ouchi's vijf verschillen,
+Clegg, audit culture met vijf kritiekpunten, Granovetter, Wellman, Castells; twee "in one breath".
+
+**v171: Society sessie 7 gecontroleerd tegen H8** (geen slides: college 28 okt nog niet geweest).
+Figuur 8.1 als afbeelding bekeken: de les zei "Russia about 11:1"; de figuur geeft de Russische
+Federatie 10:1 en de VS 11:1 (Zuid-Afrika 33:1, Brazilië 32:1). Hersteld. Vaardigheden-uitleg (9).
+Quick recap herschreven van 3.700 naar ca. 9.900 tekens. Na het college: slides en aantekeningen
+toevoegen in From the lecture-blokken.
+
+**v172: Society sessie 8 gecontroleerd tegen H23-24** (geen slides). Getallen nagelopen (Hiroshima,
+Eisenstein, verstedelijking Groot-Brittannie, laag-inkomenslanden 1950-1995, 81% in 2030, regel van 70,
+fase 2 van de demografische transitie). "8 miljard in 2022" gelabeld als algemene kennis.
+Vaardigheden-uitleg (13). Quick recap herschreven van 6.200 naar ca. 11.500 tekens. Let op bij het
+uitvoeren: `cut -c` breekt UTF-8-tekens; met Python afkappen. Hiermee zijn Society S1-S8 klaar; volgende
+stap de uitgebreide Society mid-term-les (2 opleveringen).
+
+**v173: Society mid-term-les, deel 1** (`society-midterm.js`, les-id `midterm`, via EXTRA in het
+Mid-term-blok). Per sessie een uitgebreide academische samenvatting (alle begrippen, lijsten,
+theorieën en studies) plus, daaronder, het volledige verhaal uit de Quick recap van die sessie
+(dezelfde gecontroleerde tekst). Samen ca. 130.000 tekens. Kopje "The threads" met zes lijnen.
+To remember (wie, lijsten), 22 begrippen, vijf vaardigheden op basis van de leerdoelen uit de manual
+(2.3.2). Bouwscript /home/claude/work/smid/build.py leest de recaps uit /home/claude/work/sov
+(S1-S5) en uit de lesbestanden (S6-S8). Oefentoets volgt in v174.
+
+**v174: Society mid-term-les deel 2: oefentoets.** Twintig nieuwe toepassingsvragen (scenario's,
+vakoverstijgend), antwoorden gespreid, browser 20/20; drie open examenvragen (jeugdcriminaliteit,
+bureaucratie bij een beveiligingsbedrijf, ongelijkheid door het hele vak).
+
+**v175: Intro sessie 8 (H10).** Quick recap herschreven op de standaard (van ca. 2.500 naar ca. 9.000
+tekens). Kernstof: "personal injustice" stond nog op twee plekken; het boek zegt "personal
+grievance" (en "willingness to take revenge are cultured"). Nagekeken in het boek: Rinaldi (ref. 16),
+Lehman Brothers, "driven by the human factor", lage persoonlijke voorbereiding, "usual".
+
+**v176: Intro Quick recaps sessie 1 en sessie 4 (H3, H5)** herschreven op de standaard: sessie 1 ca.
+7.500, sessie 4 (H3 en H5 samen) ca. 12.800 tekens. Definities van sessie 1 letterlijk naast de slide
+gelegd; Ljungqvist-diagram gelabeld (beeld, niet in de tekstexport); Beck-koppeling gelabeld
+unchecked. H3: "hundred or so", hardware en software, Swiss cheese nagekeken in het boek.
+Nog te doen Intro: sessie 5 (college-5) en sessie 6 (h7, h9), daarna de mid-term-les uitbreiden.
+
+**v177: Intro Quick recaps sessie 5 (college-5) en sessie 6 (h7, h9)** herschreven op de standaard.
+Sessie 5: alle feiten naast slide 5 gelegd (Kopenhagen 22 sept 2025, ca. 4 uur, Oslo ca. 3 uur, GNSS-
+kosten, EASA, La Porte-matrix, Activity 2, Alfred en Wendy, zes lenzen, vier take-aways). H7 en H9
+staan in de eigen lesbestanden (overview-tab vervangen). H7: "generic capabilities" en "systematic,
+logically related, predictive" in het boek bevestigd. Let op: markdown-tabellen (|---|) worden niet
+weergegeven; gebruik een tabel-blok. Alle Intro-lessen hebben nu een Quick recap op de standaard.
+
+**v178: Intro mid-term-les uitgebreid.** Onder elke sessie staat nu, na de academische samenvatting,
+het volledige verhaal uit de Quick recap(s) van die sessie (sessie 2: H1 en H2; 4: H3 en H5; 6: H7 en
+H9). Samen ca. 135.000 tekens in 9 kopjes. Bouwscript /home/claude/work/mid/build.py leest de recaps
+uit /tmp/dump.json (eerst /tmp/dump.py draaien). Daarmee is Intro af; volgende stap Governance
+(Quick recaps S1-S4, mid-term-les uitbreiden).
+
+**v179: Governance Quick recaps sessie 1 en 2** in het nieuwe bestand `overview-governance.js`
+(voegOverviewToe, laadt na recap-governance.js; bouwscripts in /home/claude/work/gov). S1 ca. 7.900,
+S2 ca. 6.900 tekens, geschreven uit de gecontroleerde kernstof; claims nagekeken (Clausewitz, Hobbes,
+Dogan en Pelassy, Acton, de slide-definitie van politiek, Figure 2.2 panelen, de landen van de
+austerity, "self-legitimating", "negative focusing events"). Volgende: S3 en S4.
+
+**v180: Governance Quick recaps sessie 3 en 4** (in overview-governance.js), elk ca. 7.800 tekens.
+Nagekeken: Gaddafi, Snowden, France's personal cabinet of advisers, presidentialisering, red tape,
+institution en institutionalisation (slide), "almost one-third" van de werkgelegenheid, de twee
+perspectieven op participatie, de drie antwoorden op "who commands the party" (inclusief
+Panebianco's electoral-professional party), de vier financieringsbronnen. "Nederland
+minderheidskabinet sinds 2026" gelabeld als algemene kennis.
+
+**v181: Governance Quick recaps sessie 5-7 nagelopen.** S6: de WHO stond als voorbeeld van expert
+authority; bij Maia is het hoofd van het IMF of de WHO een voorbeeld van institutional authority, en
+expert authority is beperkt tot het eigen vakgebied (onderwijs tegenover elektronica). S5 herschreven
+(3.000 naar 6.400 tekens: definitie, oorsprong, shiftology, vier betekenissen, vijf mechanismen, vier
+perspectieven, Börzel, de instrumenten "standards, best practices, ranking and shaming"). S7 aangevuld
+(5.300 naar 7.800: zes rollen, NGO-definitie, herkomst van lobby, corporatisme, tabellen 17.2, 17.3,
+17.5); VNO-NCW/FNV en #MeToo/BLM gelabeld als eigen voorbeelden.
+
+**v182: Governance mid-term-les uitgebreid**, zelfde opzet als Intro en Society: onder elke sessie het
+volledige verhaal uit de Quick recap (ca. 109.000 tekens, 8 kopjes). Bouwscript /home/claude/work/gmid
+(leest /tmp/dump.json). Daarmee zijn Intro, Governance en Society alle drie compleet: gecontroleerd,
+vaardigheden, Quick recaps op standaard, uitgebreide mid-term-les met oefentoets. Open: slides van
+nog niet gegeven colleges (Intro 7-8, Governance 7, Society 7-8) en DRM (nog niet gecontroleerd).
+
+**v183: DRM concept list deel 1 en 2 naar het CT1-blok** (EXTRA in vakken.js: groep 'Colleges',
+toetsblok 'ct1'); deel 3 blijft onder Extra naslagwerken (CT2-stof). Begin DRM-controle. Bronnen in
+het Project: slides lecture 1 (nieuw), workshop 1, lecture 2, workshop 2, course manual (met Appendix
+7, de concept list). Verhoeven en Van Tulder staan NIET in het Project. Sessie 1 (lecture 1) heeft
+nog geen les.
+
+**v184: DRM sessie 1 (lecture 1), nieuwe les** `drm-college-1.js` (les-id college-1), volledig uit de
+slides (slides_lecture_1_drm.pdf): 9 secties (waarom onderzoek, understand/decide/learn, informeel en
+systematisch met Ziggo Dome, fundamenteel en toegepast met de brandstichtingsoefening, THUAS, drie
+verantwoordelijkheden, research path, hoe de cursus werkt, de gastles van Jane Vasov), To remember,
+Quick recap, 8 vaardigheden met uitleg, 2 opdrachten, 10 quizvragen (10/10). Toetsinfo CT1 uit de
+manual (Appendix 1). Bouwscript /home/claude/work/drm/c1.py.
+
+## 9i. Planning tot de mid-terms (afgesproken 23 oktober)
+
+Toetsen: ma 9 nov DRM CT1 (20 meerkeuzevragen, 30 min, Remindo: 15 begrippen
+toepassen, 1 onderzoeksvraag beoordelen, 4 onderzoeksopzet beoordelen), di 10
+nov Intro (Remindo written exam), do 12 nov Governance, vr 13 nov Society
+(beide individual written exam). Voor Intro, Governance en Society is alle
+literatuur plus alle lecture slides toetsstof.
+
+Prioriteit van Julie: een **Quick recap bij elke les**, zo snel mogelijk, en
+per vak een **overkoepelende mid-term-les**: dezelfde opbouw als elke les,
+maar een samenvatting van alle mid-term-stof, met een oefentoets op
+examenniveau met nieuwe, vakoverstijgende vragen (geen herhaling van
+lesvragen). Volgorde, per vak op toetsdatum:
+
+Bijgesteld door Julie (23 oktober): **DRM gaat onderaan** (de quizzen gingen
+makkelijk). Eerst Intro nalopen op bugs en ontbrekingen, dan de mid-term-les.
+
+1. Intro: ~~v141 bugfixes en Quick recaps sessie 1, 2, 3; v142 Quick recaps
+   sessie 4 (H3, H5), 5 en 8 (H10)~~ klaar; volgende: de Intro-mid-term-les.
+2. (DRM, onderaan: ch5 en ch13 vertalen, Quick recaps, CT1-les.)
+3. Governance: Quick recaps bij sessie 1-4; mid-term-les (na de recap-slides
+   van sessie 8 op 6 november).
+4. Society: Quick recaps bij sessie 1-5; H16 compleet bij sessie 4 (PDF
+   nodig van Julie); mid-term-les.
+5. Tussendoor: slides van de laatste colleges verwerken zodra Julie ze
+   stuurt (Society 7 en 8, Governance 7 en 8, Intro 7 en 8).
+6. Na de mid-terms: tweaks en volledige audit (paginanummers op de
+   vakpagina, dubbel nummer in de kopjesbalk, Verhoeven 1.1-1.2 en het stuk
+   over variabelen als Julie die uploadt).
+
+## 10a. To-do lijst (bijgewerkt 29 september)
+
+**Nog te doen, in deze volgorde:**
+
+00. **FAW-slides** (sessie 3 verwerkt in v113, in de sessieles én in `faw-summary.js`). Nog te ontvangen: de overige FAW-sessies en eventuele summary-slides; verwerken in
+    `faw-summary.js` (als From the lecture-kaders bij de stappen) **en** in
+    de bijbehorende FAW-sessieles. Dubbel, op Julie's verzoek.
+
+0. **Society & Politics en Governance & Policy vooruit werken** (Julie's
+   wens, 29 september): per sessie eerst een les uit de **literatuur**, als
+   voorbereiding vóór het college; na het college de **slides en
+   aantekeningen** erin verwerken zoals bij Society 2 en 3. Julie uploadt
+   de literatuur. Eerstvolgende:
+   - ~~Society sessie 4~~ helemaal klaar (v108). ~~Sessie 5 (H17)~~ uit de
+     literatuur klaar (v108); na het college slides erbij. Daarna sessie 6:
+     Macionis H6 (groups, organisations and network society; lecture 5 bevestigt dit).
+   - ~~Governance sessie 4~~ uit de literatuur klaar (v104); na het college
+     slides en aantekeningen erbij. Daarna
+     sessie 5 (9 okt): Levi-Faur (2012), p. 3-18, aanbevolen Sørensen &
+     Torfing (2018), p. 350-359; sessie 6 (16 okt): Huberts, Kaptein & De
+     Koning (2022), p. 329-341; sessie 7 (30 okt): McCormick H16 en H17.
+   - Vergeet de lesIds niet: een les heet `<vak>/college-<n>` en komt dan
+     vanzelf bij de goede sessie; alleen een scripttag en `BESTANDEN` erbij.
+1. **Intro sessie 8 (H10)** vertalen, recap, en op niveau brengen: nu 11
+   flashcards, geen quiz, 2 oefeningen, geen bronnen.
+2. **DRM**: ~~conceptlijst deel 2 en 3~~ klaar in v102 (gegroepeerde kopjes,
+   lijstkaarten, To remember, tijdnood-blok, extra oefeningen en quizvragen).
+   Nog: de sessies 3, 4, 6, 9 en 11 vertalen en op niveau brengen. DRM sessie 1 en 2 hebben nog helemaal geen
+   les; daarvoor zijn de collegeslides nodig.
+3. ~~**Governance sessie 1**~~ klaar in v101: slides-les opgenomen in
+   `governance-college-1.js`, `SLIDES` is leeg (er zijn geen losse slides-lessen
+   meer), kernstof van 33 naar 8 kopjes, 48 flashcards, twee quizzen.
+   `governance-slides-1.js` wordt niet meer geladen; weghalen mag, hoeft niet.
+4. ~~**Professional Skills sessie 1**~~ klaar in v102: slides verwerkt, 6 kopjes, 31 flashcards.
+5. **Collegeslides die nog moeten komen**: DRM sessie 1 (lecture 1, met gastcollege): het slot op Brightspace is leeg (Julie, 10 okt); laten zitten, de stof zit in conceptlijst 1. DRM workshop 1 en lecture 2 zijn verwerkt (v111); lecture 2 hoort bij programmasessie 4, want sessie 3 is quiz 1 thuis. Lecture 2 zegt: CT1 = conceptlijst deel 1 en 2. (Governance 1, 2 en 3 en PS 1, 2 en 3 zijn verwerkt.) Julie levert ze per vak aan, met
+   haar Goodnotes-aantekeningen erbij; die zijn vaak net zo bruikbaar.
+6. **Intro sessie 3** bestaat nu wel, maar de andere sessies zonder leeswerk
+   (5, 7, 9 en verder) hebben nog geen les.
+
+**Intro to SSMS, slides:** sessie 4 (Bieder H3 en H5) verwerkt in v112: zeven "From the lecture"-kaders in de lessen h3 en h5 in `ssms-inhoud.js`, een quiz over het college bij h5 en "What the lecturer emphasised" in de recap van h5. Sessie 5 (Managing Safety & Security, Corr) is in v115 een eigen les (`intro-college-5.js`). Andere Intro-slides nog niet ontvangen; sessies 7, 9 enz. zonder leesstof hebben nog geen les.
+
+**Professional Skills, stand per sessie** (v102):
+
+| Sessie | Literatuur | Slides | Aantekeningen Julie |
+|---|---|---|---|
+| 1 | Pease & Pease | verwerkt (v102) | verwerkt (v102): de acht signalen |
+| 2 | Dragojevic e.a., Ohiagu | verwerkt | lecture 2 gecheckt: stond er al in |
+| 3 | Amsel (2019) | verwerkt (v102), nieuwe les | verwerkt (v102) |
+| 4 | geen boek; leeslinks op de slides | verwerkt (v110), nieuwe les; leeslinks uitgewerkt | niet aangeleverd |
+
+**PS-regel (Julie, 6 oktober):** verwijzen de slides naar leesstof (links), werk die leesstof dan ook uit in de les, niet alleen de slides.
+
+Let op bij PS 3: de slides tonen 7/38/55 als regel, de leesstof noemt het een urban legend. De les legt beide uit; laat dat zo.
+
+**Governance, stand per sessie** (v101):
+
+| Sessie | Literatuur | Slides | Aantekeningen Julie |
+|---|---|---|---|
+| 1 | McCormick H1 | verwerkt, slides-les samengevoegd (v101) | lecture 1 gecheckt: stond al in de slides-les; trias politica en NL head of state/government ook in sessie 3 |
+| 2 | Buckwalter & Balfour H2 | verwerkt (v101) | lecture 2 en literatuur H2 verwerkt (v101) |
+| 3 | McCormick H8 en H10 | verwerkt (v101) | bestaan niet, geen aantekeningen gemaakt |
+| 4 | McCormick H13 en H15 (v104) | verwerkt (v110) | niet aangeleverd |
+| 5 | Levi-Faur 2012 (v114); Sørensen & Torfing via de slides | verwerkt (v134) | n.v.t. |
+| 6 | Huberts e.a. 2022 + Maia 2020 (v119) | verwerkt (v134) | verwerkt (v134, aantekeningen van een medestudent) |
+
+Let op bij Governance sessie 3: de slide met de vier typen executives lijkt bij tekst-extractie uit de pptx verkeerd gekoppeld (Frankrijk onder authoritarian), maar gerenderd klopt hij. Altijd de slide renderen voordat je een "fout op de slide" meldt.
+
+**Society: altijd hele hoofdstukken** (Julie, 23 oktober). Julie gebruikt
+**editie 4** van Macionis & Plummer (toegestaan door de docent); het programma
+gaat uit van editie 5. De inhoud per hoofdstuk is gelijk, de paginanummers
+niet. Werk daarom altijd het **hele hoofdstuk** uit, ook als het programma
+maar een paar pagina's noemt: liever te veel dan te weinig. Dit vervangt de
+afspraak hieronder over 'de bijbehorende sectie'. Let op: sessie 4 gebruikt
+van H16 nog alleen de sectie over sociale bewegingen.
+
+**Society: hoofdstukken, niet paginanummers** (Julie, 6 oktober). De
+paginanummers in het programma komen uit een nieuwere druk; Julie gebruikt
+een oudere, en volgens de docent komen de hoofdstukken inhoudelijk overeen.
+Volg dus het **hoofdstuk** dat het programma noemt, niet de pagina's. Noemt
+het programma een stukje van een hoofdstuk (zoals H16 "sociale bewegingen"),
+neem dan de bijbehorende sectie in Julie's druk. Sessie 4 is hierop in v109
+aangepast: heel H5.
+
+**Society, stand per sessie** (zodat sessie 1 niet steeds vergeten wordt):
+
+| Sessie | Boek | Slides | Aantekeningen Julie | Wooclap |
+|---|---|---|---|---|
+| 1 | H1, H2, H4 (v89) | verwerkt (v89) | bestaan niet, Julie heeft bij lecture 1 geen aantekeningen gemaakt | geen |
+| 2 | H7 | verwerkt (v100) | verwerkt (v100), ook de literatuurnotities H7 (niets nieuws) | 9 vragen als quiz (v100) |
+| 3 | H11 | verwerkt (v100) | verwerkt (v100), Goodnotes en papier | geen |
+| 4 | heel H5 (v109), H16 sociale bewegingen p. 525-532 | verwerkt (v108); het college draait vooral om H5 p. 128-143 | nauwelijks gemaakt, niet nodig | geen |
+| 5 | H17 p. 541-577 (v108) | verwerkt (v117) | niet aangeleverd | geen |
+| 6 | H6 heel hoofdstuk (v120) | verwerkt (v133) | verwerkt (v133) | Wooclap (over H17) bij sessie 5 |
+| 7 | H8 heel hoofdstuk (v136) | nog niet | nog niet | nog niet |
+| 8 | H23 en H24 heel (v137); programma noemt p. 795-797 en p. 830, 841-849, 855 uit editie 5 | nog niet | nog niet | nog niet |
+
+Let op bij sessie 4: het programma zegt H16 p. 563-567 en de slide van lecture 3 p. 563-570, maar in Julie's PDF loopt H16 van p. 502 tot 539. De les gebruikt de sectie over sociale bewegingen (p. 525-528) plus human rights (p. 528-532). Lecture 4 bevestigt dit: de slide over sociale bewegingen toont Figure 16.4 uit die sectie.
+
+**Klaar sinds de vorige overdracht:** Society sessie 2 en 3 met lecture 2 en 3 (v100); Society sessie 1, 2 en 3; PS 1 en 2;
+Governance 1 en 2 (recaps); Intro sessie 1, 2, 3, 4 en 6; FAW 1 en 2; DRM
+conceptlijst 1.
+
+1. ~~Society sessie 1~~ klaar sinds v89, inclusief To remember met "What the
+   lecturer emphasised". De losse slides-les van Society is uit `SLIDES`
+   gehaald en `society-slides-1.js` bestaat niet meer.
+2. ~~Intro H9~~ klaar sinds v91: vertaald, eigen kernstof-tab (`kern2`) en een
+   recap. Sessie 6 is compleet. Volgende: **H10** voor sessie 8.
+3a. **DRM conceptlijst deel 1** is in v94 uitgebreid: extra kernstof over de
+   vijf ethiekprincipes, de ladder data-informatie-feit-hypothese-theorie, een
+   tabel met alle vijf biases en tien fallacies plus de verwarparen, en hoe je
+   een onderzoeksdoel kiest. Toepassen bevat nu de twintig oefenvragen van het
+   huiswerkblad van workshop 1, gegroepeerd per thema, met per vraag ook
+   waarom de andere opties fout zijn. Plus een To remember-tab en een quiz van
+   zestien vragen. Deel 2 en 3 staan nog op de oude opzet.
+3. ~~FAW~~: sessie 1 en 2 zijn in v92 opnieuw gebouwd uit de slides en
+   worksheets, met To remember, en het college is erin verwerkt. Let op: deze
+   twee lessen hebben 10 en 14 flashcards, minder dan de norm van dertig,
+   omdat het vak weinig begrippen kent en vooral vaardigheid is. Nog te doen:
+   recaps voor **DRM** (sessies 3, 4, 6, 9, 11 en de conceptlijsten).
+4. Rest van het vertaalwerk: Intro H10, DRM (ch3, ch4, ch5, ch13), FAW. **Niet** meer: Intro
+   H4, H6, H8 en H11 zijn in v105 uit de app gehaald (niet in het programma; de
+   handleiding noemt voor Intro alleen Bieder H1, 2, 3, 5, 7, 9 en 10), en de
+   **studiegids hoeft niet vertaald** te worden (Julie, 29 september).
+4a. ~~**Intro collegeslides**~~ klaar: lecture 2 in de recap van sessie 2
+   (v97), lecture 3 als sessie 3 (v97), en lecture 1 als sessie 1 in het
+   Engels (v98). De Nederlandse slides-les is uit `ssms-inhoud.js` gehaald en
+   `SLIDES` van Intro is leeg, dus Intro heeft geen losse slides-lessen meer.
+   Sinds v101 heeft ook Governance er geen meer.
+5. ~~Slides-lessen opheffen~~ gedaan voor Society, Intro en Governance (v101).
+
+## 10b. Nog openstaand
+
+- **Society sessie 1** is af: boek en slides verwerkt, aantekeningen van
+  lecture 1 bestaan niet. Niet meer naar vragen.
+- **Society sessie 4**: de slide van lecture 3 zegt H16 p. 563-570, het
+  programma in `VAK_VOORBEREIDING` zegt p. 563-567. Aanhouden: tot 570.
+  Nog niet aangepast in `ssms-inhoud.js`.
+- Vertalen van de resterende Nederlandse lessen, stapje voor stapje.
+- Lesstof voor alle sessies die nu nog "nog leeg" heten.
+- Governance & Policy deel 2 (sessie 9-16) heeft nog geen docentendocument.
+- `tijdelijk.txt.` in `manuals/` kan weg.

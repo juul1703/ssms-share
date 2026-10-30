@@ -1,0 +1,16 @@
+SSMS-leeromgeving — complete repo, stand 12 september 2026 (sw v57)
+
+Sleep de INHOUD van deze map naar de hoofdmap van je repository.
+Geen submap: alle bestanden staan naast elkaar, en index.html moet je
+meteen zien op de hoofdpagina van de repo.
+
+OVERDRACHT.md is voor jou en voor een nieuwe chat. De site heeft dat
+bestand niet nodig; het kan er wel gewoon in staan.
+
+Nog te doen:
+- Map 'manuals' maken met daarin de module manual als
+  Y1_Semester_1_Manual_SSMS_20262027.pdf
+- Roosterlink koppelen via het tandwiel rechtsboven
+
+Je vinkjes, notities, eigen deadlines en roosterlink zitten in je
+browser, niet in de repo. Die verhuizen niet mee naar een ander apparaat.

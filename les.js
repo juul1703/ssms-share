@@ -1,0 +1,860 @@
+/* Lespagina — tabbladen, voortgang, aantekeningen.
+   Gebruikt DATA en hulpfuncties uit app.js, blokken uit lesblokken.js,
+   lesinhoud uit lesstof.js. */
+(function(){
+  var p = new URLSearchParams(window.location.search);
+  var vakParam = p.get('vak') || '';
+  var lesId = p.get('les') || '';
+  var vak, sem, index, les;
+  var opgelost = false;
+
+  /* De pagina kan starten voordat het rooster binnen is. Zodra de feed er is
+     (uit cache of live) probeert start() het opnieuw. */
+  function start(){
+  if (opgelost) return;
+
+  /* ---- welke les? ---- */
+  if (vakParam === 'voorbeeld') {
+    vak = VOORBEELD_VAK;
+    sem = { naam: 'Voorbeeld' };
+    index = 0;
+    les = vak.lessen[0];
+  } else {
+    var hit = vindVak(vakParam);
+    if (!hit) {
+      var kandidaten = alleVakken().filter(function(x){ return x.vak.lessen.length; });
+      hit = kandidaten.filter(function(x){ return procent(x.vak) < 100; })[0] || kandidaten[0];
+      if (!hit) return wachtOfMeld();
+      var vl = volgendeLes(hit.vak);
+      lesId = vl ? vl.id : hit.vak.lessen[0].id;
+    }
+    vak = hit.vak; sem = hit.sem;
+    index = vak.lessen.map(function(x){ return x.id; }).indexOf(lesId);
+    if (index < 0) index = 0;
+    les = vak.lessen[index];
+    if (!les) return wachtOfMeld();
+    onthoudVak(vak.id);
+    if (typeof onthoudBezoek === 'function') onthoudBezoek(vak.id, les.id);
+  }
+  opgelost = true;
+
+  var vorige = vak.lessen[index - 1] || null;
+  var volgende = vak.lessen[index + 1] || null;
+  var basis = 'ssms-' + vak.id + '-' + les.id;
+  var onderdelen = metFlashcards(lesOnderdelen(vak, les));
+  if (typeof zetHoverBegrippen === 'function') zetHoverBegrippen(onderdelen);
+
+  /* Elke les krijgt Flashcards als vijfde tabblad. De kaarten worden
+     samengesteld uit alle begrippen- en flashcardblokken in de les, in
+     volgorde van voorkomen, zonder dubbele termen.
+
+     Wil je voor een les eigen kaarten schrijven, zet dan zelf een tabblad
+     met id 'kaarten' in de LESSTOF; dit blok laat dat dan met rust. */
+  function metFlashcards(tabs){
+    var alBestaat = tabs.some(function(t){ return String(t.id).toLowerCase() === 'kaarten'; });
+    if (alBestaat) return tabs;
+
+    var kaarten = [];
+    var gezien = {};
+
+    function voegToe(begrip, definitie){
+      if (!begrip || !definitie) return;
+      var sleutel = String(begrip).toLowerCase().trim();
+      if (gezien[sleutel]) return;
+      gezien[sleutel] = true;
+      kaarten.push({ begrip: begrip, definitie: definitie });
+    }
+
+    tabs.forEach(function(t){
+      (t.blokken || []).forEach(function(b){
+        if (b.type === 'begrippen') {
+          (b.items || []).forEach(function(x){ voegToe(x.begrip, x.definitie); });
+        }
+        if (b.type === 'flashcards') {
+          (b.kaarten || []).forEach(function(x){ voegToe(x.begrip, x.definitie); });
+        }
+      });
+    });
+
+    if (!kaarten.length) return tabs;
+
+    return tabs.concat([{
+      id: 'kaarten',
+      titel: 'Flashcards',
+      blokken: [
+        { type: 'tekst', titel: 'Hoe je deze kaarten gebruikt',
+          tekst: 'Tik op een term of op een definitie om alleen dat stuk te kopiëren. Zo kun je ze los plakken in Quizlet, Anki of je eigen aantekeningen.\n\nDe kaarten komen uit de begrippen die in deze les zijn behandeld.' },
+        { type: 'flashcards', titel: 'Begrippen uit deze les', kaarten: kaarten }
+      ]
+    }]);
+  }
+
+  /* Kernstof is te lang voor één scherm, maar er zijn ook te veel kopjes om
+     er tabbladen van te maken. Daarom blijft het één tabblad met daaronder
+     een rij met alle kopjes. Je tikt een kopje aan en ziet dat stuk; met
+     'Alles' zie je de hele Kernstof achter elkaar.
+
+     Er verdwijnt niets: elk blok zit altijd in precies één stuk, en 'Alles'
+     toont ze allemaal in de oorspronkelijke volgorde.
+
+     Een nieuw stuk begint bij elk blok met een titel. Blokken zonder titel,
+     zoals een begrippenlijst, horen bij het kopje erboven. */
+  /* Bij welk kopje je was, blijft staan in je browser, per les en per tabblad.
+     Kom je later terug, dan open je waar je gebleven was. */
+  function keuzeSleutel(tabId){ return basis + '-' + tabId + '-kopje'; }
+
+  function keuzeVan(tabId, aantal){
+    var v = null;
+    try { v = localStorage.getItem(keuzeSleutel(tabId)); } catch(e){}
+    if (v === null) return 0;
+    if (v === 'alles') return 'alles';
+    var n = parseInt(v, 10);
+    return (isNaN(n) || n < 0 || n >= aantal) ? 0 : n;
+  }
+
+  function zetKeuze(tabId, waarde){
+    try { localStorage.setItem(keuzeSleutel(tabId), String(waarde)); } catch(e){}
+  }
+  var subOpen = false; // staat de kopjeslijst uitgeklapt?
+  var balkIn = lokaalWaar('ssms-kopjesbalk-in'); // is de hele balk ingeklapt?
+
+  function stukkenVan(tab){
+    var blokken = tab.blokken || [];
+    /* De kopjesbalk hoort alleen bij de kernstof. Op Voorbereiding, Toepassen
+       en Checken zijn titels gewoon koppen boven een blok, geen stappen om
+       door te klikken. Kernstof-tabbladen hebben id 'kern', 'kern2', ... */
+    if (String(tab.id || '').indexOf('kern') !== 0) return null;
+    if (blokken.filter(function(b){ return b.titel; }).length < 2) return null;
+    var stukken = [];
+    blokken.forEach(function(b){
+      if (b.titel || !stukken.length) {
+        stukken.push({ titel: b.titel || tab.titel, blokken: [] });
+      }
+      stukken[stukken.length - 1].blokken.push(b);
+    });
+    return stukken;
+  }
+
+  function subSleutel(tabId, i){ return basis + '-' + tabId + '-stuk-' + i; }
+  function subAf(tabId, i){ return lokaalWaar(subSleutel(tabId, i)); }
+  var actief = 0;
+
+  /* ---- kop ---- */
+  document.title = les.titel + ' · ' + vak.naam;
+  document.getElementById('kruimel').innerHTML = vakParam === 'voorbeeld'
+    ? '<a href="index.html">Homescreen</a> · voorbeeld'
+    : '<a href="index.html">' + esc(sem.naam) + '</a> · <a href="vak.html?vak=' + encodeURIComponent(vak.id) + '">' + esc(vak.naam) + '</a>';
+  document.getElementById('titel').textContent = les.titel;
+  document.getElementById('meta').innerHTML =
+    '<span class="pil">Les ' + (index + 1) + ' van ' + vak.lessen.length + '</span>' +
+    '<span class="pil">' + les.duur + ' min</span>' +
+    (les.plek ? '<span class="pil">' + esc(les.plek) + '</span>' : '') +
+    '<span class="pil rustig">' + onderdelen.length + ' onderdelen</span>' +
+    (typeof lesUitgewerkt === 'function' && !lesUitgewerkt(vak, les)
+      ? '<span class="pil open">nog niet uitgewerkt</span>' : '') +
+    (les.url ? '<a class="pil nu" href="' + esc(les.url) + '" target="_blank" rel="noopener">Materiaal &rarr;</a>' : '');
+
+  /* ---- voortgang over de tabbladen ---- */
+  function tabSleutel(i){ return basis + '-tab-' + onderdelen[i].id; }
+  function tabAf(i){ return lokaalWaar(tabSleutel(i)); }
+  function aantalTabsAf(){
+    var c = 0;
+    for (var i = 0; i < onderdelen.length; i++) if (tabAf(i)) c++;
+    return c;
+  }
+
+  function toonVoortgang(){
+    var af = aantalTabsAf(), pct = Math.round(af / onderdelen.length * 100);
+    document.getElementById('lesBalk').style.width = pct + '%';
+    document.getElementById('lesVoortgang').textContent = af + ' van ' + onderdelen.length +
+      ' onderdelen afgerond · ' + pct + '%';
+    // les zelf geldt als afgerond zodra alle tabbladen af zijn
+    if (vakParam !== 'voorbeeld') zetAf(vak, les, af === onderdelen.length);
+  }
+
+  /* ---- tabbladen ---- */
+  function toonTabs(){
+    document.getElementById('tabs').innerHTML = onderdelen.map(function(o, i){
+      return '<button class="tab' + (i === actief ? ' nu' : '') + (tabAf(i) ? ' af' : '') +
+        '" data-tab="' + i + '"><span class="tab-nr">' + (i + 1) + '</span>' + esc(o.titel) +
+        (tabAf(i) ? '<span class="tab-vink">✓</span>' : '') + '</button>';
+    }).join('');
+
+    document.getElementById('tablijst').innerHTML = onderdelen.map(function(o, i){
+      return '<button class="tablijst-rij' + (i === actief ? ' nu' : '') + '" data-tab="' + i + '">' +
+        '<span class="mini-vink">' + (tabAf(i) ? '✓' : (i + 1)) + '</span>' + esc(o.titel) + '</button>';
+    }).join('');
+  }
+
+  function toonTab(bewaarPlek){
+    var o = onderdelen[actief];
+    var ctx = {
+      sleutel: basis + '-' + o.id,
+      volgendeHref: volgende ? lesUrl(vak, volgende) : 'index.html'
+    };
+    document.getElementById('tabLabel').textContent = 'Onderdeel ' + (actief + 1) + ' van ' + onderdelen.length;
+    document.getElementById('tabTitel').textContent = o.titel;
+    var stukken = stukkenVan(o);
+    if (!stukken) {
+      document.getElementById('inhoud').innerHTML = blokkenHtml(o.blokken, ctx);
+    } else {
+      /* Standaard open je op het eerste kopje, niet op Alles. Anders staat
+         de hele Kernstof alsnog achter elkaar en heb je aan de rij niets. */
+      var keuze = keuzeVan(o.id, stukken.length);
+
+      /* Een compacte balk in plaats van 33 chips: pijl terug, de naam van het
+         huidige kopje, pijl vooruit. Tik op de naam en de volledige lijst
+         klapt open. */
+      var alles = keuze === 'alles';
+      var nu = alles ? -1 : keuze;
+      var afTeller = stukken.filter(function(st, i){ return subAf(o.id, i); }).length;
+
+      var kop = alles
+        ? 'Alles achter elkaar'
+        : (nu + 1) + '. ' + stukken[nu].titel;
+
+      if (balkIn) {
+        var rij = '<div class="subbalk in">' +
+          '<button type="button" class="subuit" data-balk="1">' +
+          'Kopjes \u00b7 ' + (alles ? stukken.length + ' totaal' : (nu + 1) + ' van ' + stukken.length) +
+          ' <span class="subuit-pijl">\u2304</span></button></div>';
+        document.getElementById('inhoud').innerHTML = rij + (function(){
+          if (alles) {
+            return stukken.map(function(st, i){
+              return '<section class="substuk' + (subAf(o.id, i) ? ' af' : '') + '" data-stuk="' + i + '">' +
+                blokkenHtml(st.blokken, ctx) + subVink(o.id, i) + '</section>';
+            }).join('');
+          }
+          return '<section class="substuk' + (subAf(o.id, nu) ? ' af' : '') + '" data-stuk="' + nu + '">' +
+            blokkenHtml(stukken[nu].blokken, ctx) + subVink(o.id, nu, stukken.length) + '</section>';
+        })();
+        return;
+      }
+
+      var balk = '<div class="subbalk">' +
+        '<button type="button" class="subpijl" data-substap="-1"' +
+          (alles || nu === 0 ? ' disabled' : '') + ' aria-label="Vorige kopje">\u2190</button>' +
+        '<button type="button" class="subnu" data-sublijst="1">' +
+          '<span class="subnu-titel">' + esc(kop) + '</span>' +
+          '<span class="subnu-teller">' + (alles ? stukken.length + ' kopjes' :
+            'kopje ' + (nu + 1) + ' van ' + stukken.length) +
+            ' \u00b7 ' + afTeller + ' af</span>' +
+        '</button>' +
+        '<button type="button" class="subpijl" data-substap="1"' +
+          (alles || nu === stukken.length - 1 ? ' disabled' : '') + ' aria-label="Volgend kopje">\u2192</button>' +
+        '<button type="button" class="subpijl subin" data-balk="1" aria-label="Kopjesbalk inklappen">\u2303</button>' +
+        '</div>';
+
+      var lijst = '<div class="sublijst' + (subOpen ? '' : ' dicht') + '">' +
+        stukken.map(function(st, i){
+          var af = subAf(o.id, i);
+          return '<div class="sublijst-rij' + (keuze === i ? ' nu' : '') +
+            (af ? ' af' : '') + '">' +
+            '<button type="button" class="sublijst-nr" data-subvink="' + i + '" ' +
+            'title="' + (af ? 'Weer op open zetten' : 'Afvinken') + '">' +
+            (af ? '\u2713' : (i + 1)) + '</button>' +
+            '<button type="button" class="sublijst-naam" data-sub="' + i + '">' +
+            esc(st.titel) + '</button></div>';
+        }).join('') +
+        '<div class="sublijst-rij alles' + (alles ? ' nu' : '') + '">' +
+        '<span class="sublijst-nr leeg">\u2261</span>' +
+        '<button type="button" class="sublijst-naam" data-sub="alles">Alles achter elkaar lezen</button></div>' +
+        '</div>';
+
+      var rij = balk + lijst;
+
+      var body;
+      if (keuze === 'alles') {
+        body = stukken.map(function(st, i){
+          return '<section class="substuk' + (subAf(o.id, i) ? ' af' : '') + '" data-stuk="' + i + '">' +
+            blokkenHtml(st.blokken, ctx) + subVink(o.id, i) + '</section>';
+        }).join('');
+      } else {
+        body = '<section class="substuk' + (subAf(o.id, keuze) ? ' af' : '') + '" data-stuk="' + keuze + '">' +
+          blokkenHtml(stukken[keuze].blokken, ctx) + subVink(o.id, keuze, stukken.length) + '</section>';
+      }
+
+      document.getElementById('inhoud').innerHTML = rij + body;
+    }
+    document.getElementById('notitieTab').textContent = o.titel.toLowerCase();
+
+    var knop = document.getElementById('tabAf');
+    var af = tabAf(actief);
+    knop.textContent = af ? '✓ Afgerond' : 'Onderdeel afvinken';
+    knop.className = af ? 'btn af-knop af' : 'btn af-knop';
+
+    document.getElementById('tabVorige').disabled = actief === 0;
+    document.getElementById('tabVolgende').textContent = actief === onderdelen.length - 1
+      ? (volgende ? 'Volgende les →' : 'Terug naar overzicht') : 'Volgende →';
+
+    laadNotitie();
+    laadOefeningen();
+    laadQuiz();
+    toonTabs();
+    toonVoortgang();
+    if (!bewaarPlek) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ================== zoeken binnen deze les ==================
+     Doorzoekt alle tabbladen van de les. Een treffer wijst naar een
+     tabblad en, in de kernstof, naar het kopje waar de term staat.
+     Aantikken springt daarheen en zet dat kopje open. */
+
+  function tekstVanBlok(b){
+    var uit = [];
+    (function loop(w){
+      if (w === null || w === undefined) return;
+      if (typeof w === 'string') { uit.push(w); return; }
+      if (typeof w === 'number' || typeof w === 'boolean') return;
+      if (Array.isArray(w)) { w.forEach(loop); return; }
+      Object.keys(w).forEach(function(k){ loop(w[k]); });
+    })(b);
+    /* opmaaktekens weg, anders zoek je door sterretjes heen */
+    var tekst = uit.join(' \u00b7 ').replace(/\*\*/g, '').replace(/\s+/g, ' ');
+    return typeof zonderHoverMarkering === 'function' ? zonderHoverMarkering(tekst) : tekst;
+  }
+
+  function zoekIndex(){
+    var rijen = [];
+    onderdelen.forEach(function(o, ti){
+      var stukken = stukkenVan(o);
+      if (stukken) {
+        stukken.forEach(function(st, si){
+          st.blokken.forEach(function(b){
+            rijen.push({ tab: ti, stuk: si, tabTitel: o.titel, kop: st.titel, tekst: tekstVanBlok(b) });
+          });
+        });
+      } else {
+        (o.blokken || []).forEach(function(b){
+          rijen.push({ tab: ti, stuk: null, tabTitel: o.titel, kop: b.titel || '', tekst: tekstVanBlok(b) });
+        });
+      }
+    });
+    return rijen;
+  }
+
+  var index = null;
+
+  function fragment(tekst, term){
+    var laag = tekst.toLowerCase(), pos = laag.indexOf(term);
+    if (pos < 0) return '';
+    var van = Math.max(0, pos - 60), tot = Math.min(tekst.length, pos + term.length + 90);
+    return (van > 0 ? '\u2026' : '') + esc(tekst.slice(van, pos)) +
+      '<mark>' + esc(tekst.slice(pos, pos + term.length)) + '</mark>' +
+      esc(tekst.slice(pos + term.length, tot)) + (tot < tekst.length ? '\u2026' : '');
+  }
+
+  function toonZoek(){
+    var veld = document.getElementById('zoekVeld');
+    var uit = document.getElementById('zoekUit');
+    var term = (veld.value || '').trim().toLowerCase();
+    if (term.length < 2) { uit.hidden = true; uit.innerHTML = ''; return; }
+    if (!index) index = zoekIndex();
+
+    var treffers = [];
+    index.forEach(function(r, i){
+      if (r.tekst.toLowerCase().indexOf(term) >= 0) treffers.push({ r: r, i: i });
+    });
+
+    if (!treffers.length) {
+      uit.hidden = false;
+      uit.innerHTML = '<p class="zoek-niets">Niets gevonden voor \u201c' + esc(term) + '\u201d in deze les.</p>';
+      return;
+    }
+
+    var top = treffers.slice(0, 25);
+    uit.hidden = false;
+    uit.innerHTML = '<p class="zoek-aantal">' + treffers.length + ' ' +
+      (treffers.length === 1 ? 'treffer' : 'treffers') +
+      (treffers.length > top.length ? ', eerste ' + top.length + ' getoond' : '') + '</p>' +
+      top.map(function(t){
+        var r = t.r;
+        return '<button class="zoek-rij" data-ztab="' + r.tab + '" data-zstuk="' +
+          (r.stuk === null ? '' : r.stuk) + '" data-zi="' + t.i + '">' +
+          '<span class="zoek-plek">' + esc(r.tabTitel) + (r.kop ? ' \u00b7 ' + esc(r.kop) : '') + '</span>' +
+          '<span class="zoek-frag">' + fragment(r.tekst, term) + '</span></button>';
+      }).join('');
+  }
+
+  /* De balk zit ingeklapt achter het vergrootglas naast het menu. */
+  function zetZoekOpen(open){
+    var vak_ = document.getElementById('leszoek');
+    var knop = document.getElementById('zoekKnop');
+    var veld_ = document.getElementById('leszoekVeld');
+    /* Het zoekveld schuift open in de bovenbalk zelf; de resultaten
+       komen eronder te staan. */
+    veld_.hidden = !open;
+    document.querySelector('.les-top').classList.toggle('zoekt', open);
+    vak_.hidden = !open;
+    knop.setAttribute('aria-expanded', open ? 'true' : 'false');
+    knop.classList.toggle('nu', open);
+    if (open) { plaatsZoekUit(); document.getElementById('zoekVeld').focus(); }
+    else {
+      document.getElementById('zoekVeld').value = '';
+      var uit = document.getElementById('zoekUit');
+      uit.hidden = true; uit.innerHTML = '';
+    }
+  }
+
+  /* v136: de resultaten hangen direct onder de zoekbalk (vast in beeld),
+     zodat je niet terug naar boven hoeft te scrollen. */
+  function plaatsZoekUit(){
+    var vak_ = document.getElementById('leszoek');
+    var top = document.querySelector('.les-top');
+    var wrap = document.querySelector('.wrap');
+    if (!vak_ || !top || vak_.hidden) return;
+    var rt = top.getBoundingClientRect(), rw = (wrap || top).getBoundingClientRect();
+    vak_.style.top = Math.max(0, rt.bottom) + 'px';
+    vak_.style.left = rw.left + 'px';
+    vak_.style.width = rw.width + 'px';
+  }
+  window.addEventListener('scroll', plaatsZoekUit, { passive: true });
+  window.addEventListener('resize', plaatsZoekUit);
+
+  document.getElementById('zoekKnop').addEventListener('click', function(){
+    zetZoekOpen(document.getElementById('leszoekVeld').hidden);
+  });
+
+  document.getElementById('zoekVeld').addEventListener('keydown', function(e){
+    if (e.key === 'Escape') zetZoekOpen(false);
+  });
+
+  document.getElementById('zoekVeld').addEventListener('input', function(){ toonZoek(); plaatsZoekUit(); });
+  document.getElementById('zoekWis').addEventListener('click', function(){
+    var veld = document.getElementById('zoekVeld');
+    veld.value = '';
+    toonZoek();
+    veld.focus();
+  });
+
+  document.getElementById('zoekUit').addEventListener('click', function(e){
+    var rij = e.target.closest ? e.target.closest('[data-ztab]') : null;
+    if (!rij) return;
+    var ti = +rij.getAttribute('data-ztab');
+    var zs = rij.getAttribute('data-zstuk');
+    var term = (document.getElementById('zoekVeld').value || '').trim().toLowerCase();
+    var rij_ = index && index[+rij.getAttribute('data-zi')];
+    if (zs !== '') zetKeuze(onderdelen[ti].id, +zs);
+    naarTab(ti);
+    zetZoekOpen(false);
+    /* v136: spring naar de treffer zelf en laat hem even oplichten,
+       in plaats van naar het begin van het tabblad. */
+    if (!markeerTreffer(term, rij_ ? rij_.tekst : '')) {
+      document.getElementById('inhoud').scrollIntoView({ block: 'start' });
+    }
+  });
+
+  function normTekst(t){ return (t || '').toLowerCase().replace(/[\s\u00a0]+/g, ' ').trim(); }
+
+  function markeerTreffer(term, bron){
+    if (!term) return false;
+    var inh = document.getElementById('inhoud');
+    if (!inh) return false;
+    /* een stukje rond de term uit de index, om de juiste plek te vinden
+       als de term vaker op de pagina staat */
+    var b = normTekst(bron), p = b.indexOf(term), stukje = '';
+    if (p >= 0) stukje = b.slice(Math.max(0, p - 18), p + term.length + 18).replace(/\s\u00b7\s/g, ' ');
+    var walker = document.createTreeWalker(inh, NodeFilter.SHOW_TEXT, null);
+    var kandidaten = [], n;
+    while ((n = walker.nextNode())) {
+      if (n.nodeValue && n.nodeValue.toLowerCase().indexOf(term) >= 0) kandidaten.push(n);
+    }
+    if (!kandidaten.length) return false;
+    function zichtbaar(node){ var el = node.parentElement; return !!(el && (el.offsetParent || el.getClientRects().length)); }
+    function blokVan(node){ var el = node.parentElement; return (el && el.closest('p, li, td, th, h2, h3, h4, blockquote, .blok, div')) || el; }
+    var keuze = null;
+    if (stukje) {
+      for (var i = 0; i < kandidaten.length && !keuze; i++) {
+        if (zichtbaar(kandidaten[i]) && normTekst(blokVan(kandidaten[i]).textContent).indexOf(stukje.slice(0, 30)) >= 0) keuze = kandidaten[i];
+      }
+    }
+    if (!keuze) for (var j = 0; j < kandidaten.length && !keuze; j++) if (zichtbaar(kandidaten[j])) keuze = kandidaten[j];
+    if (!keuze) return false;
+    var pos = keuze.nodeValue.toLowerCase().indexOf(term);
+    var rest = keuze.splitText(pos);
+    rest.splitText(term.length);
+    var mark = document.createElement('mark');
+    mark.className = 'zoek-hl';
+    rest.parentNode.replaceChild(mark, rest);
+    mark.appendChild(rest);
+    mark.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setTimeout(function(){ mark.classList.add('weg'); }, 4500);
+    setTimeout(function(){
+      if (!mark.parentNode) return;
+      var ouder = mark.parentNode;
+      while (mark.firstChild) ouder.insertBefore(mark.firstChild, mark);
+      ouder.removeChild(mark);
+      ouder.normalize && ouder.normalize();
+    }, 6500);
+    return true;
+  }
+
+  function naarTab(i){
+    if (i < 0 || i >= onderdelen.length) return;
+    actief = i;
+    onthoudPlek(i);
+    toonTab();
+  }
+
+  /* ---- waar was je gebleven? ----
+     Blijft bewaard tussen sessies (localStorage), zodat je bij het
+     openen van een hoofdstuk terugkomt op het onderdeel waar je stopte. */
+  function onthoudPlek(i){
+    try { localStorage.setItem(basis + '-plek', String(i)); } catch(e){}
+  }
+  function laatstePlek(){
+    var v = null;
+    try { v = localStorage.getItem(basis + '-plek'); } catch(e){}
+    if (v === null) { try { v = sessionStorage.getItem(basis + '-tab-actief'); } catch(e){} } // oude opslag
+    return v === null ? null : +v;
+  }
+  // andere scripts (lesextra.js) mogen weten in welke les we zitten
+  window.LES_BASIS = basis;
+
+  /* ---- aantekening per tabblad ---- */
+  var timer;
+  function notitieSleutel(){ return 'ssms-notitie-' + vak.id + '-' + les.id + '-' + onderdelen[actief].id; }
+  function laadNotitie(){
+    var veld = document.getElementById('notitie');
+    try { veld.value = localStorage.getItem(notitieSleutel()) || ''; } catch(e){}
+    document.getElementById('opslag').textContent = 'wordt bewaard op dit apparaat';
+  }
+  document.getElementById('notitie').addEventListener('input', function(){
+    var veld = this, melding = document.getElementById('opslag');
+    clearTimeout(timer);
+    melding.textContent = 'bewaren…';
+    timer = setTimeout(function(){
+      try { localStorage.setItem(notitieSleutel(), veld.value); } catch(e){}
+      melding.textContent = 'bewaard';
+    }, 400);
+  });
+
+  /* ---- eigen antwoorden bij oefeningen ---- */
+  function oefSleutel(id){ return basis + '-' + onderdelen[actief].id + '-oef-' + id; }
+  function laadOefeningen(){
+    document.querySelectorAll('.oef-veld').forEach(function(v){
+      var id = v.getAttribute('data-oef') || '0';
+      try { v.value = localStorage.getItem(oefSleutel(id)) || ''; } catch(e){}
+      v.addEventListener('input', function(){
+        try { localStorage.setItem(oefSleutel(id), v.value); } catch(e){}
+      });
+    });
+  }
+
+  /* ---- gegeven quizantwoorden bewaren ----
+     Per les, per tabblad en per vraag. Kom je later terug, dan staan je
+     antwoorden er nog, met de uitleg en de score. */
+  function quizSleutel(q, i){
+    return basis + '-' + onderdelen[actief].id + '-quiz' + q + '-v' + i;
+  }
+  function laadQuiz(){
+    document.querySelectorAll('.quiz').forEach(function(quiz, q){
+      quiz.querySelectorAll('.qvraag').forEach(function(vraag, i){
+        var gekozen = null;
+        try { gekozen = localStorage.getItem(quizSleutel(q, i)); } catch(e){}
+        if (gekozen === null) return;
+        var knop = vraag.querySelector('.qoptie[data-optie="' + gekozen + '"]');
+        if (knop) antwoordQuiz(knop, true);
+      });
+    });
+  }
+
+  /* ---- kopiëren ---- */
+  var meldTimer;
+  function meld(tekst){
+    var el = document.getElementById('melding');
+    el.textContent = tekst;
+    el.hidden = false;
+    clearTimeout(meldTimer);
+    meldTimer = setTimeout(function(){ el.hidden = true; }, 1600);
+  }
+  function kopieer(tekst){
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tekst).then(function(){ meld('Gekopieerd'); },
+        function(){ meld('Kopiëren lukte niet'); });
+    } else {
+      var t = document.createElement('textarea');
+      t.value = tekst; document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); meld('Gekopieerd'); } catch(e){ meld('Kopiëren lukte niet'); }
+      document.body.removeChild(t);
+    }
+  }
+
+  /* ---- begrip-pop-ups binnen beeld houden (v106) ---- */
+  function plaatsPop(el){
+    var pop = el && el.querySelector('.begrip-pop');
+    if (!pop) return;
+    pop.style.left = '0px';
+    var r = pop.getBoundingClientRect(), marge = 12;
+    var teVer = r.right - (window.innerWidth - marge);
+    if (teVer > 0) pop.style.left = (-Math.min(teVer, r.left - marge)) + 'px';
+  }
+  document.addEventListener('mouseover', function(e){
+    var h = e.target.closest && e.target.closest('.begrip-hover');
+    if (h && !h.contains(e.relatedTarget)) plaatsPop(h);
+  });
+  document.addEventListener('focusin', function(e){
+    var h = e.target.closest && e.target.closest('.begrip-hover');
+    if (h) plaatsPop(h);
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && document.activeElement && document.activeElement.closest && document.activeElement.closest('.begrip-hover')) document.activeElement.blur();
+  });
+
+  /* ---- klikgedrag ---- */
+  document.addEventListener('click', function(e){
+    var t = e.target;
+
+    var kop = t.closest('[data-kopieer]');
+    if (kop) { e.preventDefault(); kopieer(kop.getAttribute('data-kopieer')); return; }
+
+    var tab = t.closest('[data-tab]');
+    if (tab) { naarTab(+tab.getAttribute('data-tab')); return; }
+
+    var doel = t.closest('[data-vinkdoel]');
+    if (doel) {
+      var k = doel.getAttribute('data-vinkdoel');
+      lokaalZet(k, !lokaalWaar(k));
+      doel.textContent = lokaalWaar(k) ? '✓' : '';
+      var rij = doel.closest('.doel') || doel.closest('.kun');
+      if (rij) rij.classList.toggle('af', lokaalWaar(k));
+      return;
+    }
+
+    var kaart = t.closest('.kaart');
+    if (kaart && !t.closest('[data-kopieer]')) { return; }   // kaarten draaien niet meer om
+
+    var optie = t.closest('.qoptie');
+    if (optie) { antwoordQuiz(optie); return; }
+  });
+
+  document.getElementById('tabAf').addEventListener('click', function(){
+    var k = tabSleutel(actief);
+    lokaalZet(k, !lokaalWaar(k));
+    toonTab(true);
+    if (lokaalWaar(k) && actief < onderdelen.length - 1) naarTab(actief + 1);
+  });
+
+  /* Niets in deze balk mag de pagina laten springen. Elke actie tekent het
+     tabblad opnieuw, en daarbij verliest de browser je scrollpositie; die
+     zetten we hier direct terug. Geldt voor doorbladeren, kiezen uit de
+     lijst, afvinken en in- of uitklappen. */
+  function zonderSprong(fn){
+    var y = window.pageYOffset;
+    fn();
+    window.scrollTo(0, y);
+  }
+
+  /* Het vinkje onderaan een kopje. */
+  /* Onderaan een kopje: links de afvinkknop, rechts een pijl naar het
+     volgende kopje. Bij het laatste kopje en in de stand 'alles achter
+     elkaar' vervalt die pijl. */
+  function subVink(tabId, i, aantal){
+    var af = subAf(tabId, i);
+    /* Eén knop rechtsonder. Die vinkt dit kopje af en gaat meteen door naar
+       het volgende. Bij het laatste kopje valt het doorgaan weg.
+       Per ongeluk afgevinkt? Tik dan op het vinkje in de kopjeslijst. */
+    var laatste = !aantal || i >= aantal - 1;
+
+    var knop = laatste
+      ? '<button type="button" class="btn af-knop sub-afknop' + (af ? ' af' : '') +
+        '" data-subvink="' + i + '">' +
+        '<span class="sub-afvink">' + (af ? '\u2713' : '') + '</span>' +
+        (af ? 'Kopje afgerond' : 'Kopje afvinken') + '</button>'
+      : '<button type="button" class="btn af-knop sub-afknop" data-afverder="' + i + '">' +
+        '<span class="sub-afvink">' + (af ? '\u2713' : '') + '</span>' +
+        (af ? 'Volgend kopje' : 'Afvinken en verder') +
+        ' <span aria-hidden="true">\u2192</span></button>';
+
+    return '<div class="sub-af">' + knop + '</div>';
+  }
+
+  /* Een kopje kiezen of afvinken. */
+  document.getElementById('inhoud').addEventListener('click', function(e){
+    if (!e.target.closest) return;
+
+    /* De hele balk in- of uitklappen. De keuze blijft staan, ook als je een
+       andere les opent. */
+    if (e.target.closest('[data-balk]')) {
+      balkIn = !balkIn;
+      lokaalZet('ssms-kopjesbalk-in', balkIn);
+      if (balkIn) subOpen = false;
+      zonderSprong(toonTab);
+      return;
+    }
+
+    /* De lijst open- of dichtklappen. */
+    if (e.target.closest('[data-sublijst]')) {
+      subOpen = !subOpen;
+      zonderSprong(toonTab);
+      return;
+    }
+
+    /* Een kopje verder of terug. */
+    var stap = e.target.closest('[data-substap]');
+    if (stap && !stap.disabled) {
+      var o2 = onderdelen[actief];
+      var st2 = stukkenVan(o2);
+      var h = keuzeVan(o2.id, st2.length);
+      if (h !== 'alles') {
+        var n = h + parseInt(stap.getAttribute('data-substap'), 10);
+        if (n >= 0 && n < st2.length) zetKeuze(o2.id, n);
+      }
+      zonderSprong(toonTab);
+      return;
+    }
+
+    var chip = e.target.closest('[data-sub]');
+    if (chip) {
+      var w = chip.getAttribute('data-sub');
+      zetKeuze(onderdelen[actief].id, (w === 'alles') ? 'alles' : parseInt(w, 10));
+      subOpen = false;
+      zonderSprong(toonTab);
+      return;
+    }
+
+    /* Afvinken en meteen door. */
+    var verder = e.target.closest('[data-afverder]');
+    if (verder) {
+      var o3 = onderdelen[actief];
+      var st3 = stukkenVan(o3);
+      var j = parseInt(verder.getAttribute('data-afverder'), 10);
+      var sl = subSleutel(o3.id, j);
+      if (!lokaalWaar(sl)) lokaalZet(sl, true);
+      if (st3 && j + 1 < st3.length) zetKeuze(o3.id, j + 1);
+      zonderSprong(toonTab);
+      return;
+    }
+
+    var vink = e.target.closest('[data-subvink]');
+    if (vink) {
+      var i = parseInt(vink.getAttribute('data-subvink'), 10);
+      var k = subSleutel(onderdelen[actief].id, i);
+      lokaalZet(k, !lokaalWaar(k));
+      zonderSprong(toonTab);
+      return;
+    }
+  });
+
+  document.getElementById('tabVorige').addEventListener('click', function(){ naarTab(actief - 1); });
+  /* "Volgende" onderaan een tabblad vinkt dat tabblad ook af (v126).
+     Alleen aanzetten, nooit uitzetten: wie een tabblad weer open wil,
+     gebruikt de afvinkknop. */
+  function vinkHuidigAf(){
+    var k = tabSleutel(actief);
+    if (!lokaalWaar(k)) { lokaalZet(k, true); toonVoortgang(); }
+  }
+  document.getElementById('tabVolgende').addEventListener('click', function(){
+    vinkHuidigAf();
+    if (actief < onderdelen.length - 1) return naarTab(actief + 1);
+    window.location.href = volgende ? lesUrl(vak, volgende) : 'vak.html?vak=' + encodeURIComponent(vak.id);
+  });
+
+  /* ---- quiz ---- */
+  function antwoordQuiz(knop, hersteld){
+    var vraag = knop.closest('.qvraag');
+    if (vraag.classList.contains('beantwoord')) return;
+    var juist = +vraag.getAttribute('data-juist');
+    var gekozen = +knop.getAttribute('data-optie');
+    vraag.classList.add('beantwoord');
+    vraag.querySelectorAll('.qoptie').forEach(function(o, i){
+      if (i === juist) o.classList.add('goed');
+      else if (i === gekozen) o.classList.add('fout');
+      o.disabled = true;
+    });
+    vraag.querySelector('.quitleg').hidden = false;
+    if (gekozen === juist) vraag.classList.add('was-goed');
+    var quiz = vraag.closest('.quiz');
+    var goed = quiz.querySelectorAll('.was-goed').length;
+    var totaal = quiz.querySelectorAll('.qvraag').length;
+    var score = quiz.querySelector('[data-score]');
+    score.textContent = goed + ' / ' + totaal;
+    score.classList.add('actief');
+    if (!hersteld) {
+      var alle = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+      try {
+        localStorage.setItem(quizSleutel(alle.indexOf(quiz),
+          Array.prototype.slice.call(quiz.querySelectorAll('.qvraag')).indexOf(vraag)), gekozen);
+      } catch(e){}
+    }
+  }
+
+  /* ---- menu in-/uitklappen ---- */
+  var menuUit = false;
+  try { menuUit = localStorage.getItem('ssms-zijkolom') === 'uit'; } catch(e){}
+  function toonMenu(){
+    document.getElementById('lesBody').classList.toggle('menu-uit', menuUit);
+    document.getElementById('menuKnop').textContent = menuUit ? '☰' : '✕';
+    document.getElementById('menuKnop').title = menuUit ? 'Menu uitklappen' : 'Menu inklappen';
+  }
+  document.getElementById('menuKnop').addEventListener('click', function(){
+    menuUit = !menuUit;
+    try { localStorage.setItem('ssms-zijkolom', menuUit ? 'uit' : 'aan'); } catch(e){}
+    toonMenu();
+  });
+  toonMenu();
+
+  /* ---- lessen in dit vak ---- */
+  document.getElementById('vaklijst').innerHTML = vak.lessen.map(function(l, i){
+    var af = vakParam === 'voorbeeld' ? false : isAf(vak, l);
+    var nu = l.id === les.id;
+    var uit = typeof lesUitgewerkt === 'function' ? lesUitgewerkt(vak, l) : true;
+    return '<a class="vaklijst-rij' + (nu ? ' nu' : '') + (af ? ' af' : '') +
+      '" href="' + lesUrl(vak, l) + '"><span class="mini-vink">' + (af ? '✓' : (i + 1)) +
+      '</span><span>' + esc(l.titel) + (uit ? '' : '<span class="niet-uit">nog leeg</span>') +
+      '</span></a>';
+  }).join('');
+
+  /* ---- vorige/volgende les ---- */
+  function zetLink(id, doel, pijl){
+    var el = document.getElementById(id);
+    if (!doel) { el.className = 'leeg'; el.textContent = pijl + ' geen les'; el.removeAttribute('href'); return; }
+    el.className = '';
+    el.href = lesUrl(vak, doel);
+    el.textContent = pijl + ' ' + doel.titel;
+  }
+  zetLink('vorigeLink', vorige, '←');
+  zetLink('volgendeLink', volgende, '→');
+
+  /* ---- toetsenbord ---- */
+  document.addEventListener('keydown', function(e){
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') { actief < onderdelen.length - 1 ? naarTab(actief + 1) : (volgende && (window.location.href = lesUrl(vak, volgende))); }
+    if (e.key === 'ArrowLeft') { actief > 0 ? naarTab(actief - 1) : (vorige && (window.location.href = lesUrl(vak, vorige))); }
+  });
+
+  /* ---- start waar je gebleven was ---- */
+  var bewaard = laatstePlek();
+  if (bewaard !== null && bewaard < onderdelen.length) actief = bewaard;
+  else {
+    for (var i = 0; i < onderdelen.length; i++) if (!tabAf(i)) { actief = i; break; }
+  }
+  toonTab(true);
+  } /* einde start() */
+
+  /* Nog geen rooster binnen? Wachten. Wel binnen en toch niets gevonden? Melden. */
+  function wachtOfMeld(){
+    var bezig = typeof ROOSTER_STATUS !== 'undefined' && ROOSTER_STATUS.staat === 'laden';
+    document.getElementById('titel').textContent = bezig ? 'Les laden…' : 'Deze les bestaat niet meer';
+    document.getElementById('kruimel').innerHTML = '<a href="index.html">Homescreen</a>';
+    document.getElementById('meta').innerHTML = '';
+    document.getElementById('lesBody').hidden = true;
+    document.querySelector('.voortgang-strip').hidden = true;
+    document.getElementById('tabs').innerHTML = bezig
+      ? '<span class="hint">Je rooster wordt opgehaald…</span>'
+      : '<a class="btn" href="index.html">Terug naar het overzicht</a>';
+  }
+
+  function herstel(){
+    document.getElementById('lesBody').hidden = false;
+    document.querySelector('.voortgang-strip').hidden = false;
+  }
+
+  start();
+  if (typeof opFeed === 'function') opFeed(function(){
+    if (opgelost) return;
+    herstel();
+    start();
+    if (!opgelost) wachtOfMeld();
+  });
+})();
